@@ -1,0 +1,23 @@
+*) GET TREE|ATTR <TREE_NAME>([a-zA-Z0-9_]) SELF|CHILDREN|DESCENDANT|ANCESTOR|PARENT
+                                                         {"_id":"[a-zA-Z0-9]",
+								                          {"<attr>":{"val":<val>,"comp":"lte|gte|gt|lt|eq|neq}, ...}
+    RESTRICTIONS
+	if tree: reference = SELF|CHILDREN|PARENT
+	
+*)  PUT TREE|ATTR <TREE_NAME>([a-zA-Z0-9_]) SELF|CHILD|DESCENDANT|ANCESTOR|PARENT
+                                                         IF TREE:
+														      ONLY SELF & ANY VALID JSON with "_id" key
+													     IF ATTRS:
+														    {"_id":"[a-zA-Z0-9]","attrs":VALID JSON where each key is string}
+															
+*)  DELETE TREE|ATTR <TREE_NAME>([a-zA-Z0-9_]) SELF|CHILDREN|DESCENDANT|ANCESTOR|PARENT
+                                                         IF TREE:
+														      ONLY SELF|CHILDREN|PARENT & {"_id":"[a-zA-Z0-9]"}
+													     IF ATTRS:
+														    {"_id":"[a-zA-Z0-9]","attrs":[strings]}
+															
+*) LOAD <TREE NAME>([a-zA-Z0-9_]) <FILE PATH>([regex for file path])
+
+*) SHOW TREES
+
+*) DESCRIBE <TREE NAME>([a-zA-Z0-9_])
