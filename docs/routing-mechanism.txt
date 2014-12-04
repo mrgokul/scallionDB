@@ -1,0 +1,21 @@
+------- Worker readiness, Broker polling , Heartbeats and failure detection-----
+
+1. Main program starts broker thread and worker threads
+2. Broker polls both endpoints (worker +& client) in BROKER_HEARTBEAT (BH) intervals
+3. Worker thread signals 'READY' to broker. Broker adds available workers to Worker Queue (WQ)
+4. At each BH interval, broker sends heartbeats to worker
+5. At each Worker Heartbeat (WH) interval, worker sends heartbeats to broker
+6. If the broker does not detect the worker in BH * LIVENESS time, the broker removes the worker from WQ
+7. If the worker does not detect the worker in WH * LIVENESS time, the broker sends Heartbeats in an exponential fashion (until INTERVAL_MAX) to detect broker
+
+-------Request queuing and routing-----
+1. Upon client request, broker detects service(tree).
+2. If the requested timeout < Expected worker performance (EWP) * LIVENESS, the broker signals client with timeout
+   If no timeout requested, the timeout is kept at EWP
+3. The broker parses the request to get service(tree).
+4. If service is already running (checks active_trees), the broker queues the request in message queue (MQ)
+   else updates active_trees and passes request to backend
+5. If a response is received from backend, the broken passes message to client and removes the associated service(tree) from active_trees
+6. Between polling for backend  and frontend activity, the broker checks the status of messages in MQ.
+   If a message has exceeded timeout, the message is discarded and timeout signalled to client
+   Else, for each message, it's associated tree is looked up active_trees and message is passed to backed if service(tree) is not running

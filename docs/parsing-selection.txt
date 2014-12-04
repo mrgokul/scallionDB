@@ -1,0 +1,26 @@
+The selection code (part of parsers folder) convertes a JSON expression to a prefix stack while evaluating the JSON expression for proper syntax.
+
+Below are default keys which are part of scallionnDB set of literals and should be used only in its appropriate context.
+
+*) "_or" : The logical operator OR
+*) "_and": The logical operator AND
+*) "_eq": The relational operator EQUAL (==)
+*) "_neq": The relational operator NOT EQUAL (!=)
+*) "_gt": The relational operator GREATER THAN (>)
+*) "_gte": The relational operator GREATER THAN OR EQUAL TO (>=)
+*) "_lt": The relational operator LESSER THAN (<)
+*) "_lte": The relational operator LESSER THAN OR EQUAL TO (<=)
+
+The value of an attribute is default to EQUAL, i.e.
+
+{"foo":"bar"} implies, selection of nodes where the attribute "foo" EQUALS "bar". The relational operator EQUALS compares foo to BAR
+
+For other relational operators, the following example format is used
+
+{"foo":{"gt":2}} which implies, selction of nodes where the attribute "foo" is GREATER THAN 2. The relational operator GREATER THAN compares foo to 2
+
+The following checks are performed in addition to the expression evalated as a proper JSON. Value implies what the relational operator compares to.
+
+*) The value to key "_id" should be an alphanumeric string
+*) The value to any other key (except operator) can only be of string or numeric type and a valid relational operator
+*) The value to an operator key can only be of Array type, each object within the array an Object type and atleast 2 objects in the array
