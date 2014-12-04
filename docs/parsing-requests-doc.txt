@@ -1,0 +1,45 @@
+Parsing requests code (part of parsers folder) parses input request while evaluating the JSON expression for proper syntax.
+
+Below are the formats of GET/PUT/DELETE requests for ScallionDB.
+
+*)	GET TREE|ATTR <TREE_NAME>([a-zA-Z0-9_]) SELF|CHILDREN|DESCENDANT|ANCESTOR|PARENT
+                                                         {"_id":"[a-zA-Z0-9]",
+								                          "<attr>":{"val":<val>,"comp":"lte|gte|gt|lt|eq|neq}, ...} ["str1","str2"]//ATTR
+	SYNTAX
+		GET <Object> <Object_Name> <Reference> <Conditions> <Attribute_List>
+	
+    RESTRICTIONS
+		Object			->	Can be ATTR or TREE
+		Object_Name		->	Name of an Attribute or Tree
+		Reference		->	SELF|CHILDREN|PARENT (If Object = TREE)
+							SELF|CHILDREN|PARENT|DESCENDANT|ANCESTOR (If Object = ATTR)
+		Conditions		->	List of conditions to be evaluated for filtering the nodes. Similar to Where clause in RDBMS
+		Attribute_List	->	List of attributes to be fetched. Valid only if Object is ATTR
+		
+*)  PUT TREE|ATTR <TREE_NAME>([a-zA-Z0-9_]) SELF|CHILD|DESCENDANT|ANCESTOR|PARENT
+                                                          {"_id":"[a-zA-Z0-9]",
+								                          "<attr>":{"val":<val>,"comp":"lte|gte|gt|lt|eq|neq}, ...} {valid_json}//ATTR|TREE
+	
+	SYNTAX
+		PUT <Object> <Object_Name>	<Reference> <Conditions> <JSON>
+	RESTRICTIONS
+		Object			->	Can be ATTR or TREE
+		Object_Name		->	Name of an Attribute or Tree
+		Reference		->	SELF (If Object = TREE)
+							SELF|CHILDREN|PARENT|DESCENDANT|ANCESTOR (If Object = ATTR)
+		Conditions		->	List of conditions to be evaluated for filtering the nodes. Similar to Where clause in RDBMS
+		JSON			->	Valid JSON for new Object
+		
+	
+*)	DELETE TREE|ATTR <TREE_NAME>([a-zA-Z0-9_]) SELF|CHILDREN|DESCENDANT|ANCESTOR|PARENT
+                                                         {"_id":"[a-zA-Z0-9]",
+								                          "<attr>":{"val":<val>,"comp":"lte|gte|gt|lt|eq|neq}, ...} ["str1","str2"]//ATTR
+	SYNTAX
+		DELETE <Object> <Object_Name> <Reference> <Conditions> <Attribute_List>
+    RESTRICTIONS
+		Object			->	Can be ATTR or TREE
+		Object_Name		->	Name of an Attribute or Tree
+		Reference		->	SELF (If Object = TREE)
+							SELF|CHILDREN|PARENT|DESCENDANT|ANCESTOR (If Object = ATTR)
+		Conditions		->	List of conditions to be evaluated for filtering the nodes. Similar to Where clause in RDBMS
+		Attribute_List	->	List of attributes to be fetched. Valid only if Object is ATTR
