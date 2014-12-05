@@ -1,27 +1,22 @@
-from scallionDB.parser.selection import Selector, Operator
+from scallionDB.parser.request import parse_request
 
-import unittest,re,json
+import unittest
 
-_or = Operator('_or')
-_and = Operator('_and')
-r = re.compile("((?P<GETREQ>GET)|(?P<PUTREQ>PUT)|(?P<DELREQ>DELETE))\s((?P<Attr>ATTR)|(?P<Tree>TREE))\s(?P<ObjName>[a-zA-Z0-9_]+)\s(?(Attr)(SELF|CHILDREN|DESCENDANT|ANCESTOR|PARENT)|(?(GETREQ)(SELF|CHILDREN|PARENT)|(SELF)))\s(?P<JSON>\{.+?\})(?(PUTREQ)(\s(?P<JSON2>\{.+\}))|(?(Attr)(\s(?P<LIST2>\[.+?\]))|(?!(.+?))))")
 
 class SelectorTest(unittest.TestCase):
 
     def test_simple_1(self):
-        grps = [m.groupdict() for m in r.finditer("GET TREE TABLE_1 SELF {\"id\": 20}")]
-        if grps:
-            json_get = grps[0]["JSON"]
-            try:
-                json.loads(json_get)
-            except:
-                self.assertRaises(SyntaxError,"Invalid JSON format")
-            expr = Selector(json_get)
-        else:
-            self.assertRaises(SyntaxError,"Error in syntax of GET request")
-        #expr = Selector('{"_id": 20}')
-        #self.assertRaises(SyntaxError,expr.toPrefix)
-    	
+        expr = "GET TREE TABLE_1 SELF {\"id\": 20}"
+        self.assertEqual({'Attr': None, 'DELREQ': None, 'GETREQ': 'GET', 'JSON': '{"id": 20}', 'JSON2': None, 'LIST2': None, 'ObjName': 'TABLE_1', 'PUTREQ': None, 'Tree': 'TREE'},parse_request(expr))
+    
+    def test_simple_2(self):
+        expr = "GET TREE TABLE_1 SELF {\"_id\": 20}"
+        self.assertEqual({'Attr': None, 'DELREQ': None, 'GETREQ': 'GET', 'JSON': '{"_id": 20}', 'JSON2': None, 'LIST2': None, 'ObjName': 'TABLE_1', 'PUTREQ': None, 'Tree': 'TREE'},parse_request(expr))
+		
+    def test_simple_3(self):
+        expr = "GET TREE TABLE_1 ANCESTOR {\"id\": 20}"
+        self.assertRaises(SyntaxError,parse_request(expr))
+    '''	
     def test_simple_2(self):
         grps = [m.groupdict() for m in r.finditer("GET TREE TABLE_1 ANCESTOR {\"id\": 20}")]
         if grps:
@@ -87,7 +82,7 @@ class SelectorTest(unittest.TestCase):
             expr = Selector(json_get)
         else:
             raise SyntaxError("Invalid PUT request")	
-    '''		
+    	
     def test_simple_7(self):
         expr = Selector('{"id":{"_eq":[2]}}')
         self.assertRaises(SyntaxError,expr.toPrefix) 
