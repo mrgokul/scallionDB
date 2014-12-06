@@ -3,7 +3,6 @@ import sys
 import json
 
 def constructJSON(soup, id=None):
-    print id
     json = soup.attrs
     if id in soup.attrs:
         json['_id'] = json[id]

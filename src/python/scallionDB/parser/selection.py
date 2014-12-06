@@ -25,6 +25,8 @@ class Selector(object):
         self.expr = json.loads(expr)
 		
     def toPrefix(self):
+        if not self.expr:
+            return self.expr
         if len(self.expr) == 1 :
             if self.expr.keys()[0] not in logical:
                 k,v = self.expr.items()[0]

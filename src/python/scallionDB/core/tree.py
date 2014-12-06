@@ -8,8 +8,11 @@ class Tree(dict):
 
     def __init__(self, name):
         self.name = name
+        self.RI = {}
+        self.pathMap = {}
+        self.id = None
 		
-    def GET(self,expr,attrs=[])
+    def GET(self,expr,attrs=[]):
         ids = _getIDs(expr)
         nodes = []
         for id in ids:
@@ -35,6 +38,8 @@ class Tree(dict):
 		
     def _getIDs(self,expr):
         prefix = Selector(expr).toPrefix()[::-1]
+        if not prefix:
+            return set([self.id])
         if len(prefix) == 1:
             return _getID(expr)
         operandStack = []

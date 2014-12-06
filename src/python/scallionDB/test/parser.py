@@ -6,6 +6,10 @@ _or = Operator('_or')
 _and = Operator('_and')
 
 class SelectorTest(unittest.TestCase):
+    
+    def test_simple_0(self):
+        expr = Selector('{}')
+        self.assertEqual({},expr.toPrefix())
 
     def test_simple_1(self):
         expr = Selector('{"_id": 20}')
