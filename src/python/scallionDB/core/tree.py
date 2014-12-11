@@ -2,18 +2,19 @@ import json
 
 from scallionDB.parser.selection import Selector, Operator
 from treeutil import evaluate, flattenTree, traverse, generateID
-from treeutil import filterByRelation, filterByReference 
+from treeutil import  filterByRelation
 from copy import deepcopy
 
 import traceback
+import gc
 
 class Tree(dict):
 
     def __init__(self, name):
         self.name = name
         self.RI = {}
-        self.pathMap = {'_ROOT':[]}
-        self.id = '_ROOT'    
+        self.PM = {}
+        self.parentChildMap = {}		
         self['_id'] = '_ROOT'		
         self['_children'] = []
 		
@@ -21,25 +22,23 @@ class Tree(dict):
         ids = self._getAllID(expr)
         getNodes = []
         for id in ids:
-            nodes = self._getNodes(id)
-            if nodes:
-                refNodes = filterByReference(nodes,ref)
-                if attrs:
-                    if isinstance(attrs,list):
-                        if '_id' not in attrs:
-                            attrs.append('_id')
-                        all = False
-                    elif attrs == '*':
-                        all = True
-                    attrNodes = []
-                    for refNode in refNodes:
-                        if all:
-                            attr = [a for a in refNode.keys() if a != '_children']
-                        else:
-                            attr = attrs
-                        attrNodes.extend([{k:refNode.get(k,None) for k in attr}])
-                    refNodes = attrNodes
-                getNodes.extend(refNodes)
+            nodes = self._getNodes(id,ref)
+            if attrs:
+                if isinstance(attrs,list):
+                    if '_id' not in attrs:
+                        attrs.append('_id')
+                    all = False
+                elif attrs == '*':
+                    all = True
+                attrNodes = []
+                for node in nodes:
+                    if all:
+                        attr = [a for a in node.keys() if a != '_children']
+                    else:
+                        attr = attrs
+                    attrNodes.extend([{k:node.get(k,None) for k in attr}])
+                nodes = attrNodes
+            getNodes.extend(nodes)
         return getNodes
 			
     def PUT(self,expr,ref,tree={},attrs={}):
@@ -47,11 +46,13 @@ class Tree(dict):
         if len(nodes) > 1 and tree.has_key('_id'):
             raise KeyError("More than one node to PUT wit same ID")
         treeIDs = []
+        num = len(nodes)
         for node in nodes:
             if tree:
                 try:
-                    treeID = self._putTree(node, tree)
+                    treeID = self._putTree(node, tree, num)
                 except:
+                    traceback.print_exc()
                     raise Exception("Only %s out of %s nodes PUT, %s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
 									str(treeIDs)))
@@ -66,7 +67,11 @@ class Tree(dict):
                 					%(str(len(treeIDs)), str(len(nodes)), 
 									str(treeIDs)))
                 treeIDs.append(node['_id'])
+            num -= 1
         return treeIDs
+		
+    def LOAD(self,path):
+        return self.PUT('{}','SELF',json.load(open(path)))
 		
     def DELETE(self,expr,ref,attrs=[]): 
         nodes = self.GET(expr,ref) 
@@ -81,7 +86,7 @@ class Tree(dict):
                     raise Exception("Only %s out of %s nodes DELETED, %s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
 									str(treeIDs)))
-                    treeIDs.append(node['_id'])
+                treeIDs.append(node['_id'])
             else:
                 try:
                     self._delTree(node)
@@ -90,29 +95,42 @@ class Tree(dict):
                     raise Exception("Only %s out of %s nodes DELETED, %s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
 									str(treeIDs)))
-                    treeIDs.append(node['_id'])			
+                treeIDs.append(node['_id'])	
+        gc.collect()				
         return treeIDs          
 			
-    def _getNodes(self,id):
-        if not self.pathMap.has_key(id):
+    def _getNodes(self,id,ref):
+        if id == '_ROOT':
+            return [self]
+        if not self.PM.has_key(id):
             return []
-        nodes = [self]       
-        def reduceToNode(node,num):
-            if not node:
-                return None
-            if not node.has_key('_children'):
-                return None
-            if len(node['_children'])  < num+1 :
-                return None
-            nodes.append(node['_children'][num])
-            return node['_children'][num]			
-        reduce(reduceToNode, self.pathMap[id], self)
-        return nodes
+        if ref == 'SELF':
+            return [self.PM[id]]
+        elif ref == 'CHILDREN':
+            return self.PM[id]['_children']
+        elif ref == 'DESCENDANTS':
+            retNodes = []
+            for node in self.PM[id]['_children']:
+                retNodes.extend(flattenTree(node))
+        elif ref == 'PARENT':
+            node = self.PM[id]
+            parent = self.parentChildMap[node['_id']]
+            if parent == '_ROOT':
+                return [self]
+            return [self.PM[parent]]
+        elif ref == 'ANCESTOR':
+            retNodes = []
+            while True:
+                id = self.parentChildMap[self.PM[id]['_id']]
+                if id == '_ROOT':
+                    break
+                retNodes.append(self.PM[id])
+            return retNodes
            
     def _getAllID(self,expr):
         prefix = Selector(expr).toPrefix()
         if not prefix:
-            return set([self.id])
+            return set([self['_id']])
         if len(prefix) == 1:
             return self._getIDset(prefix[0])
         operandStack = []
@@ -146,18 +164,18 @@ class Tree(dict):
             ids.update(self.RI[attrKey][matchKey])
         return ids
                
-    def _putTree(self,here,tree):
-        tree = deepcopy(tree)
-        parentChildMap = {}  
+    def _putTree(self,here,tree,num):
+        if num > 1:
+            tree = deepcopy(tree)
         attrsMap = {}		
         traverser = traverse(tree)
         while True:
-
             try:
                 node = traverser.next()
             except StopIteration:
                 break
             parentID = self._setID(node)
+            self.PM[parentID] = node			
             for k,v in node.iteritems():
                 if k!='_id' and k!='_children' and not isinstance(v,dict)\
                     and not isinstance(v,list):
@@ -171,24 +189,13 @@ class Tree(dict):
             children = node['_children']
             if not isinstance(children,list):
                 raise TypeError("_children attribute should be of Array Type")
-            for num, child in enumerate(children):   
+            for child in children:   
                 id = self._setID(child)
-                parentChildMap[id] = (parentID,num) 	
-  				
+                self.parentChildMap[id] = parentID 	
 				
-        parentChildMap[tree['_id']] = (here['_id'],len(here['_children']))			
+        self.parentChildMap[tree['_id']] = here['_id']  				
         here['_children'].append(tree)
-        herePath = self.pathMap[here['_id']]
-        #treePath = herePath + [len(here['_children'])]
-        #self.pathMap[tree['_id']] = treePath
         try:
-            for k,v in  parentChildMap.iteritems():
-                pathStack = [v[1]]
-                while v[0] in parentChildMap:
-                    v = parentChildMap[v[0]]
-                    pathStack.append(v[1])
-                fullPath = herePath + pathStack[::-1]
-                self.pathMap[k] = fullPath
             for attr,valMap in attrsMap.iteritems():
                 for val, map in valMap.iteritems():			
                     if self.RI.has_key(attr):
@@ -199,7 +206,7 @@ class Tree(dict):
                     else:
                         self.RI[attr] = {val:map} 		
             return tree['_id']
-        except Exception, e: 
+        except Exception, e:
             self.DELETE(tree)
             raise Exception(e)
 
@@ -228,15 +235,13 @@ class Tree(dict):
     def _delTree(self, node):
         parent = self.GET(json.dumps({'_id':node['_id']}),'PARENT')[0]
         index = parent['_children'].index(node)
-        nextSiblings = parent['_children'][(index+1):]
         flatTree = flattenTree(node)
         for tree in flatTree:
             self._delAttrs(tree)
-            del self.pathMap[tree['_id']]
+            del self.PM[tree['_id']]
+            del self.parentChildMap[tree['_id']]
+            
         del parent['_children'][index]
-        if nextSiblings:
-            self.reducePath(nextSiblings)
-        
 						
     def _delAttrs(self,here,attrs='*',replace={}):
         if attrs == '*':
@@ -244,35 +249,33 @@ class Tree(dict):
         for k in attrs:
             if here.has_key(k):
                 v = here[k]
-                del here[k]
+                here.pop(k)
                 if k!='_id' and k!='_children' and not isinstance(v,dict)\
                     and not isinstance(v,list):
                     if self.RI.has_key(k):
                         if self.RI[k].has_key(v):
                             self.RI[k][v].remove(here['_id'])
+                if not self.RI[k][v]:
+                    del self.RI[k][v]
+                if not self.RI[k]:
+                    del self.RI[k]
+						
             if replace.has_key(k):
                 oldVal = replace[k]
                 here[k] = oldVal
                 if not isinstance(oldVal,dict) and not isinstance(oldVal,list):
-                    self.RI[k][oldVal].add(here['_id'])
-					
-    def _reducePath(self,siblings):
-        index =  len(siblings[0]) - 1
-        for sibling in siblings:
-            trees = flattenTree(flattenTree(node))
-            for tree in trees:
-                self.pathMap[index] -= 1			
+                    self.RI[k][oldVal].add(here['_id'])	
 	   
     def _setID(self,node):
         if not isinstance(node, dict):
             raise TypeError("Node should be Object Type")
         if node.has_key('_id'):
             id = node['_id']
-            if self.pathMap.has_key(id):
+            if self.PM.has_key(id):
                 raise KeyError('ID %s already present' %id)
         else:
             id = generateID()
-            while self.pathMap.has_key(id):
+            while self.PM.has_key(id):
                 id = generateID()
             node['_id'] = id
         return id
