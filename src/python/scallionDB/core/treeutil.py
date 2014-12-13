@@ -1,6 +1,7 @@
 from scallionDB.parser.constants import *
 from scallionDB.parser.selection import Operator
 from random import randint
+import json
 
 _and = Operator('_and')
 _or = Operator('_or')
@@ -30,26 +31,6 @@ def filterByRelation(keys,value,operator):
         return set(filter((lambda x: x <= value), keys))
     if operator == '_gte':
         return set(filter((lambda x: x >= value), keys))	
-
-def filterByReference(nodes,ref):
-    if ref not in reference:
-        raise ValueError("Reference should be one of %s" %str(reference))
-    if ref =='ANCESTOR':
-        return nodes[:-1]
-    elif ref == 'PARENT':
-        if len(nodes) > 1:
-            return [nodes[-2]]
-        else:
-            return []
-    elif ref == 'SELF':
-        return [nodes[-1]]
-    elif ref == 'CHILDREN':
-        return nodes[-1]['_children']
-    else:
-        retNodes = []
-        for node in nodes[-1]['_children']:
-            retNodes.extend(flattenTree(node))
-        return retNodes
 		
 def flattenTree(tree):
     nodes = []
@@ -75,8 +56,48 @@ def traverse(tree):
         yield node
         nodeQ.extend(node['_children'])
         i += 1
-    
+		
+def reduceToNode(node,num):
+    if not node:
+        return None
+    if not node.has_key('_children'):
+        return None
+    if len(node['_children'])  < num+1 :
+        return None
+    return node['_children'][num]  
 
+		
+def treebreaker(tree):	
+	
+    childStack = [0]
+    while True:
+        node = reduce(reduceToNode, childStack, tree)
+        outNode = json.dumps({k:v for k,v in node.items() 
+		                      if k!='_children'})
+
+        if node.has_key('_children'):
+            if node['_children']:
+                parent = node
+                outNode = outNode[:-1] +', "_children":['
+                if childStack[-1] != 0:
+                    outNode = ", "+ outNode
+                childStack.append(0)
+                yield outNode
+            else:
+                if childStack[-1] != 0:
+                    outNode = ", "+ outNode
+                yield outNode
+                childStack[-1] += 1
+                while childStack[-1] == len(parent['_children']):
+                    childStack.pop()
+                    if not childStack:
+                        raise StopIteration
+                    parent = reduce(reduceToNode, childStack[:-1], tree)
+                    yield "]}"
+                    childStack[-1] += 1
+        else:
+            yield outNode
+		
            
 		
 

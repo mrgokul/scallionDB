@@ -2,7 +2,7 @@ import json
 
 from scallionDB.parser.selection import Selector, Operator
 from treeutil import evaluate, flattenTree, traverse, generateID
-from treeutil import  filterByRelation
+from treeutil import  filterByRelation, treebreaker
 from copy import deepcopy
 
 import traceback
@@ -280,5 +280,20 @@ class Tree(dict):
             node['_id'] = id
         return id
 		
+    def dump(self,out):
+        breaker = treebreaker(self)
+        with open(out,'w') as f:
+            while True:
+                try:
+                    s = breaker.next()
+                    f.write(s)
+                except StopIteration:
+                    break
+
+		
+
+                
+            
+            
 
     
