@@ -8,7 +8,7 @@ from constants import *
 from collections import Counter
 
 def get_tree(x):
-    return x     
+    return 'write',x     
 
 		
 class BrokerThread(threading.Thread):
@@ -28,6 +28,9 @@ class BrokerThread(threading.Thread):
         backend = context.socket(zmq.ROUTER)  # ROUTER
         frontend.bind("tcp://*:" + str(self.client_port) ) # For clients
         backend.bind("inproc://workers" )  # For workers
+		
+        frontend.setsockopt(zmq.LINGER, 0)
+        backend.setsockopt(zmq.LINGER, 0)
         
         poller = zmq.Poller()
         poller.register(frontend, zmq.POLLIN)
@@ -35,30 +38,33 @@ class BrokerThread(threading.Thread):
         
         workers = WorkerQueue()
         mq = [] #non FIFO queue
-        activeTrees = set()    
+        readTrees = []   
+        writeTrees = set()
         heartbeat_at = time.time() + self.BEAT_INTERVAL
         
         while True:
             socks = dict(poller.poll(self.BEAT_INTERVAL * 1000))
-            #print socks.get(frontend,None), socks.get(backend,None), workers, activeTrees, mq
+            #print mq
 
             # Handle worker activity on backend
             if socks.get(backend) == zmq.POLLIN:
                 # Use worker address for LRU routing
                 frames = backend.recv_multipart()
-                if not frames:
-                    break
-        
-                address = frames[0]
-                workers.ready(Worker(address,self.EXPECTED_PERFORMANCE, self.BEAT_LIVENESS))
-        
-                # Validate control message, or return reply to client
-                msg = frames[1:]
-                if len(msg) > 1:
+                msg_type = frames[3]
+                if msg_type != SDB_COMPLETE:
+                    if msg_type == SDB_FAILURE or msg_type == SDB_MESSAGE:
+                        frontend.send_multipart(frames[1:])
+                    else:
+                        address = frames[0]
+                        workers.ready(Worker(address,self.EXPECTED_PERFORMANCE, 
+					                         self.BEAT_LIVENESS))
+       
+                else:
                     tree = frames.pop()
-                    #print "worker", tree, frames
-                    frontend.send_multipart(msg)
-                    activeTrees.remove(tree)
+                    readTrees.remove(tree)
+                    if tree in writeTrees:
+                        writeTrees.remove(tree)
+                    frontend.send_multipart(frames[1:])
         
                 # Send heartbeats to idle workers if it's time
                 if time.time() >= heartbeat_at:
@@ -72,15 +78,24 @@ class BrokerThread(threading.Thread):
             remove = []
             for index, msg in enumerate(mq):
                 if t > msg.expiry:
-                    msg[-1] = SDB_TIMEOUT
-                    frontend.send_multipart(msg)
+                    msg.frames[-1] = SDB_TIMEOUT
+                    msg.frames.append("Resources busy")
+                    frontend.send_multipart(msg.frames)
                     remove.append(index)
                 else:
-                    if msg.tree not in activeTrees and len(workers) > 0:
-                        activeTrees.add(msg.tree)
+                    if len(workers) > 0:
+                        if msg.type == 'write':                     
+                            if msg.tree not in readTrees:
+                                writeTrees.add(msg.tree)
+                            else:
+                                continue
+                        else:
+                            if msg.tree in writeTrees:
+                                continue							
+                        readTrees.append(msg.tree)
                         msg.frame.insert(0,workers.next())
                         backend.send_multipart(msg.frame)
-                        remove.append(index)
+                        remove.append(index)						
             for index in remove:
                 mq.pop(index)   			
         			
@@ -93,23 +108,39 @@ class BrokerThread(threading.Thread):
                 else:
                     timeout = EXPECTED_WORKER_PERFORMANCE + time.time()
                 if timeout < 0:
-                    msg[-1] = SDB_TIMEOUT
-                    frontend.send_multipart(msg)                      
+                    frames[-1] = SDB_TIMEOUT
+                    frames.append("Expected Timeout computed")
+                    frontend.send_multipart(frames)                      
                 else:
-                    tree = get_tree(frames[-1])
+                    type, tree = get_tree(frames[-1])
                     if not tree:
-                        tree = SDB_NONTREE
-                    if tree not in activeTrees and len(workers) > 0:
-                        activeTrees.add(tree)
-                        frames.insert(0, workers.next())
-                        backend.send_multipart(frames)
+                        tree = SDB_NONTREE # for show statement
+                        continue
+                    if len(workers) > 0:
+
+                        if type == 'write':                     
+                            if tree not in readTrees:
+                                frames.insert(0, workers.next())
+                                backend.send_multipart(frames)
+                                writeTrees.add(tree)
+                                readTrees.append(tree)
+                            else:
+                                msg = Message(frames, tree, timeout, type)
+                                mq.append(msg)
+                        else:
+                            if tree in writeTrees:
+                                msg = Message(frames, tree, timeout, type)
+                                mq.append(msg)	
+                            else:
+                                readTrees.append(tree)
+                                frames.insert(0, workers.next())
+                                backend.send_multipart(frames)							
                     else:         
-                        msg = Message(frames, tree, timeout)
+                        msg = Message(frames, tree, timeout, type)
                         mq.append(msg)
         
             workers.purge()
 			
-
 class WorkerThread(threading.Thread):
 
     def __init__(self, context, hi, hl, interval, interval_max):
@@ -121,18 +152,19 @@ class WorkerThread(threading.Thread):
         self.INTERVAL_MAX = interval_max
 		
         self.worker = context.socket(zmq.DEALER) 	
-        identity = "%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
-        self.worker.setsockopt(zmq.IDENTITY, identity)
+        self.identity = "%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+        self.worker.setsockopt(zmq.IDENTITY, self.identity)
         self.worker.setsockopt(zmq.LINGER, 0)
         self.worker.connect("inproc://workers")
 		
         self.poller = zmq.Poller()
         self.poller.register(self.worker, zmq.POLLIN)
-        print "Started Worker-" + identity
+        print "Started Worker-" + self.identity
 
  		
     def run(self):
-        self.worker.send(SDB_READY)    
+        sdb_message = ['','',SDB_READY]
+        self.worker.send_multipart(sdb_message)   
         liveness = self.BEAT_LIVENESS
         interval = self.INTERVAL_INIT
         
@@ -149,10 +181,15 @@ class WorkerThread(threading.Thread):
                 #  - 1-part HEARTBEAT -> heartbeat
                 frames = self.worker.recv_multipart()
                 if len(frames) == 3:
-                    tree = get_tree(frames[-1])
-                    frames.append(tree)
+                    type, tree = get_tree(frames[-1])
+                    frames.insert(2,SDB_MESSAGE)
+                    self.worker.send_multipart(frames)
                     #print "I: Normal reply", frames
                     time.sleep(5)  # Do some heavy work
+                    self.worker.send_multipart(frames)
+                    time.sleep(5)
+                    frames[-2] = SDB_COMPLETE
+                    frames[-1] = tree
                     self.worker.send_multipart(frames)
          
                     liveness = self.BEAT_LIVENESS
@@ -175,7 +212,8 @@ class WorkerThread(threading.Thread):
             if time.time() > heartbeat_at:
                 heartbeat_at = time.time() + self.BEAT_INTERVAL
                 #print "I: Worker heartbeat"
-                self.worker.send(SDB_HEARTBEAT)
+                hb_message = ['','',SDB_HEARTBEAT]
+                self.worker.send_multipart(hb_message)
 	
 context = zmq.Context(1)
 PORT = 5555

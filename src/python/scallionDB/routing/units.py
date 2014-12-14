@@ -4,13 +4,19 @@ import time
 class Worker(object):
     def __init__(self, address, ewp, hl):
         self.address = address
+        self.ewp = ewp
+        self.hl = hl
         self.expiry = time.time() + ewp * hl 
 
 class WorkerQueue(OrderedDict):
 
     def ready(self, worker):
-        self.pop(worker.address, None)
-        self[worker.address] = worker
+
+        if not self.has_key(worker.address):
+            self[worker.address] = worker
+        else:
+            self[worker.address].expiry = time.time() + worker.ewp * worker.hl 
+
 
     def purge(self):
         """Look for & kill expired workers."""
@@ -28,7 +34,8 @@ class WorkerQueue(OrderedDict):
         return address
 		
 class Message(object):
-    def __init__(self, frame, tree, expiry):
-        self.frame = frame
+    def __init__(self, frames, tree, expiry, type):
+        self.frames = frames
         self.tree = tree
-        self.expiry = time.time() + expiry
+        self.expiry = expiry 
+        self.type = type
