@@ -72,9 +72,11 @@ def reduceToNode(node,num):
 		
 def treebreaker(tree):	
 	
-
     childStack = []
     if not tree.has_key('_children'):
+        yield json.dumps(tree)
+        raise StopIteration
+    if not tree['_children']:
         yield json.dumps(tree)
         raise StopIteration
     while True:
@@ -94,6 +96,8 @@ def treebreaker(tree):
                 childStack.append(0)
                 yield outNode
             else:
+                if not childStack:
+                    print outNode, node
                 if childStack[-1] != 0:
                     outNode = ", "+ outNode
                 yield outNode

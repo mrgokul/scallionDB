@@ -1,0 +1,4 @@
+BUGS:
+*) DELETE TREE problem : Deleting trees which has same constructs for both parent and children are not happening. 
+			 If Parent gets deleted first, children never exists but the request to delete remains
+*) Flushing for DELETE has some problem in writing to a file

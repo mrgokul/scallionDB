@@ -4,6 +4,8 @@ import threading
 import json
 import traceback
 import gc
+import os
+import shutil
 
 from units import Worker, WorkerQueue, Message
 from random import randint
@@ -16,7 +18,8 @@ from scallionDB.core import evaluate, treebreaker
 		
 class BrokerThread(threading.Thread):
 
-    def __init__(self, context, client_port, hi, hl, ewp, trees):
+    def __init__(self, context, client_port, hi, hl, ewp, trees, 
+	             flushCounter, flushLimit):
         super(BrokerThread, self).__init__()
         self.context = context
         self.client_port = str(client_port)
@@ -24,21 +27,28 @@ class BrokerThread(threading.Thread):
         self.BEAT_LIVENESS = hl
         self.EXPECTED_PERFORMANCE = ewp
         self.trees = trees
+        self.flushCounter = flushCounter
+        self.flushLimit = flushLimit
+        
         print "Started Broker"
 
     def run(self):
 	
         frontend = self.context.socket(zmq.ROUTER) # ROUTER
         backend = self.context.socket(zmq.ROUTER)  # ROUTER
+        flusher = self.context.socket(zmq.DEALER)  # ROUTER
         frontend.bind("tcp://*:" + str(self.client_port) ) # For clients
         backend.bind("inproc://workers" )  # For workers
+        flusher.bind("inproc://flusher" ) # For flusher
 		
         frontend.setsockopt(zmq.LINGER, 0)
         backend.setsockopt(zmq.LINGER, 0)
-        
+        flusher.setsockopt(zmq.LINGER, 0)
+		 
         poller = zmq.Poller()
         poller.register(frontend, zmq.POLLIN)
         poller.register(backend, zmq.POLLIN)
+        poller.register(flusher, zmq.POLLIN)
         
         workers = WorkerQueue()
         mq = [] #non FIFO queue
@@ -50,13 +60,14 @@ class BrokerThread(threading.Thread):
             socks = dict(poller.poll(self.BEAT_INTERVAL * 1000))
             # Handle worker activity on backend
             if socks.get(backend) == zmq.POLLIN:
+                #print len(workers), mq, self.flushCounter, readTrees, writeTrees
                 # Use worker address for LRU routing
                 frames = backend.recv_multipart()
                 msg_type = frames[3]
                 if msg_type != SDB_COMPLETE:
                     if msg_type == SDB_MESSAGE:
                         frontend.send_multipart(frames[1:])
-                    if msg_type == SDB_FAILURE:
+                    elif msg_type == SDB_FAILURE:
                         tree = frames.pop()
                         readTrees.remove(tree)
                         if tree in writeTrees:
@@ -69,10 +80,18 @@ class BrokerThread(threading.Thread):
        
                 else:
                     tree = frames.pop()
-                    readTrees.remove(tree)
-                    if tree in writeTrees:
-                        writeTrees.remove(tree)
                     frontend.send_multipart(frames[1:])
+                    if tree in writeTrees:
+                        self.flushCounter[tree] += 1
+                        if self.flushCounter[tree] >= self.flushLimit:
+                            frames[-1] = tree
+                            flusher.send_multipart(frames)
+                        else:
+                            readTrees.remove(tree)
+                            writeTrees.remove(tree)
+                    else:
+                        readTrees.remove(tree)
+
         
                 # Send heartbeats to idle workers if it's time
                 if time.time() >= heartbeat_at:
@@ -102,6 +121,7 @@ class BrokerThread(threading.Thread):
                                 continue							
                         readTrees.append(msg.tree)
                         msg.frames.insert(0,workers.next())
+
                         backend.send_multipart(msg.frames)
                         remove.append(msg)						
             for r in remove:
@@ -154,7 +174,13 @@ class BrokerThread(threading.Thread):
                     else:         
                         msg = Message(frames, tree, timeout, type)
                         mq.append(msg)
-        
+						
+            if socks.get(flusher) == zmq.POLLIN: 
+                frames = flusher.recv_multipart()
+                treename = frames[-1]                              
+                readTrees.remove(tree)
+                writeTrees.remove(tree)        
+                self.flushCounter[tree] = 0
             workers.purge()
 			
 class WorkerThread(threading.Thread):
@@ -240,7 +266,7 @@ class WorkerThread(threading.Thread):
                         del output
                         gc.collect()
                     except:
-                        err = traceback.format_exc(limit=20)
+                        err = traceback.format_exc()
                         frames[-2] = SDB_FAILURE
                         frames[-1] = err
                         frames.append(tree)
@@ -269,3 +295,35 @@ class WorkerThread(threading.Thread):
                 hb_message = ['','',SDB_HEARTBEAT]
                 self.worker.send_multipart(hb_message)
 	
+class FlusherThread(threading.Thread):
+
+    def __init__(self, context, trees, flushCounter, folder):
+        super(FlusherThread, self).__init__()
+        self.context = context
+        self.flushCounter = flushCounter
+        self.trees = trees	
+        self.folder = folder
+		
+        self.flusher = context.socket(zmq.DEALER) 	
+        self.identity = "%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+        self.flusher.setsockopt(zmq.IDENTITY, self.identity)
+        self.flusher.setsockopt(zmq.LINGER, 0)
+        self.flusher.connect("inproc://flusher")
+        self.poller = zmq.Poller()
+        self.poller.register(self.flusher, zmq.POLLIN)
+		
+	
+    def run(self):
+        while True:
+            socks = dict(self.poller.poll(500))   
+            # Handle flushing activity 
+            if socks.get(self.flusher) == zmq.POLLIN:
+                frames = self.flusher.recv_multipart()
+                treename = frames[-1]
+                filename = os.path.join(self.folder, treename+'.tmp')
+                self.trees[treename].dump(filename)
+                newname = os.path.join(self.folder, treename+'.tree')
+                shutil.move(filename, newname)
+                self.flusher.send_multipart(frames)
+                				
+		
