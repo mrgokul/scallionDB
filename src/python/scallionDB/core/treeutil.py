@@ -1,7 +1,7 @@
 from scallionDB.parser.constants import *
 from scallionDB.parser.selection import Operator
 from random import randint
-import json
+import json, re
 
 _and = Operator('_and')
 _or = Operator('_or')
@@ -31,6 +31,9 @@ def filterByRelation(keys,value,operator):
         return set(filter((lambda x: x <= value), keys))
     if operator == '_gte':
         return set(filter((lambda x: x >= value), keys))	
+    if operator == '_regex':
+        str_keys = [a for a in keys if isinstance(a,basestring)]
+        return set(filter((lambda x: re.search(value,x)), str_keys))	
 		
 def flattenTree(tree):
     nodes = []
@@ -69,9 +72,15 @@ def reduceToNode(node,num):
 		
 def treebreaker(tree):	
 	
-    childStack = [0]
+
+    childStack = []
+    if not tree.has_key('_children'):
+        yield json.dumps(tree)
+        raise StopIteration
     while True:
         node = reduce(reduceToNode, childStack, tree)
+        if not node:
+            raise StopIteration
         outNode = json.dumps({k:v for k,v in node.items() 
 		                      if k!='_children'})
 
@@ -79,8 +88,9 @@ def treebreaker(tree):
             if node['_children']:
                 parent = node
                 outNode = outNode[:-1] +', "_children":['
-                if childStack[-1] != 0:
-                    outNode = ", "+ outNode
+                if childStack:
+                    if childStack[-1] != 0:
+                        outNode = ", "+ outNode
                 childStack.append(0)
                 yield outNode
             else:
@@ -91,6 +101,7 @@ def treebreaker(tree):
                 while childStack[-1] == len(parent['_children']):
                     childStack.pop()
                     if not childStack:
+                        yield "]}"
                         raise StopIteration
                     parent = reduce(reduceToNode, childStack[:-1], tree)
                     yield "]}"

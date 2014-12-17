@@ -20,6 +20,6 @@ class TreeTest(unittest.TestCase):
         self.assertEqual(j,t['_children'][0])	
 
     def test_z_delete_attrs(self):	
-        t.DELETE('{"_id":"xxxx"}','ANCESTOR',attrs='*')		
+        t.DELETE('{"_id":"xxxx"}','ANCESTORS',attrs='*')		
         del j['a'], j['b'], j['_children'][0]['a'],  j['_children'][0]['c']
         self.assertEqual(j,t['_children'][0])	

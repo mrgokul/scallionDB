@@ -5,8 +5,7 @@ from treeutil import evaluate, flattenTree, traverse, generateID
 from treeutil import  filterByRelation, treebreaker
 from copy import deepcopy
 
-import traceback
-import gc
+import gc, traceback
 
 class Tree(dict):
 
@@ -42,6 +41,7 @@ class Tree(dict):
         return getNodes
 			
     def PUT(self,expr,ref,tree={},attrs={}):
+ 
         nodes = self.GET(expr,ref)
         if len(nodes) > 1 and tree.has_key('_id'):
             raise KeyError("More than one node to PUT wit same ID")
@@ -52,10 +52,9 @@ class Tree(dict):
                 try:
                     treeID = self._putTree(node, tree, num)
                 except:
-                    traceback.print_exc()
-                    raise Exception("Only %s out of %s nodes PUT, %s"
+                    raise Exception("Only %s out of %s nodes PUT, %s\n%s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
-									str(treeIDs)))
+									str(treeIDs),traceback.format_exc()))
                 treeIDs.append(treeID)
             else:
                 if node['_id'] == '_ROOT':
@@ -63,15 +62,22 @@ class Tree(dict):
                 try:
                     self._putAttrs(node, attrs)
                 except Exception, e:
-                    raise Exception("Only %s out of %s nodes ATTRS applied:, %s"
+                    raise Exception("Only %s out of %s nodes ATTRS applied:, %s\n%s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
-									str(treeIDs)))
+									str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])
             num -= 1
         return treeIDs
 		
     def LOAD(self,path):
-        return self.PUT('{}','SELF',json.load(open(path)))
+        root = json.load(open(path))
+        ids = []
+        if root.get('_id') == '_ROOT':
+            for child in root['_children']:
+                ids.extend(self.PUT('{}','SELF',child))
+            return ids
+        else:
+            return self.PUT('{}','SELF',root)
 		
     def DELETE(self,expr,ref,attrs=[]): 
         nodes = self.GET(expr,ref) 
@@ -83,18 +89,17 @@ class Tree(dict):
                 try:
                     self._delAttrs(node,attrs)
                 except:
-                    raise Exception("Only %s out of %s nodes DELETED, %s"
+                    raise Exception("Only %s out of %s nodes DELETED, %s\n%s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
-									str(treeIDs)))
+									str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])
             else:
                 try:
                     self._delTree(node)
                 except:
-                    traceback.print_exc()
-                    raise Exception("Only %s out of %s nodes DELETED, %s"
+                    raise Exception("Only %s out of %s nodes DELETED, %s\n%s"
                 					%(str(len(treeIDs)), str(len(nodes)), 
-									str(treeIDs)))
+									str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])	
         gc.collect()				
         return treeIDs          
@@ -118,7 +123,7 @@ class Tree(dict):
             if parent == '_ROOT':
                 return [self]
             return [self.PM[parent]]
-        elif ref == 'ANCESTOR':
+        elif ref == 'ANCESTORS':
             retNodes = []
             while True:
                 id = self.parentChildMap[self.PM[id]['_id']]
