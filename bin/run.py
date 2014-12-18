@@ -25,7 +25,7 @@ bthread.start()
 
 for _ in range(NBR_WORKERS):
     wthread = WorkerThread(context, HEARTBEAT_INTERVAL, HEARTBEAT_LIVENESS,
-                        INTERVAL_INIT, INTERVAL_MAX, trees)						
+                        INTERVAL_INIT, INTERVAL_MAX, trees, folder)						
     wthread.start()
 	
 fthread = FlusherThread(context, trees, flushCounter, folder)

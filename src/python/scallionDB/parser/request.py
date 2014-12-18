@@ -3,7 +3,7 @@ from constants import *
 
 import re,json
 
-REGEX = r"((?P<LOAD>((?P<LOADREQ>LOAD)\s(?P<LOADTREENAME>[a-zA-Z0-9_]+)\s(?P<FILEPATH>[a-zA-Z0-9_\.\/\-\s:]+)))|(?P<NONLOAD>((?P<GETREQ>GET)|(?P<PUTREQ>PUT)|(?P<DELREQ>DELETE)|(?P<SHOWREQ>SHOW))\s(?(SHOWREQ)(TREES)(?!(.+?))|(?(LOADREQ)(LOADTREE)(?!(.+?))|((?P<ATTR>ATTR)|(?P<TREE>TREE)))\s(?P<TREENAME>[a-zA-Z0-9_]+)\s(?(ATTR)(?P<ATTRREF>(SELF|CHILDREN|DESCENDANTS|ANCESTORS|PARENT))|(?P<TREEREF>(SELF|PARENT|CHILDREN)))\s(?P<SELECTOR>\{.*\})(?(PUTREQ)(\s(?P<PUTTREE>\{.+\}))|(?(ATTR)((\s(?P<ATTRLIST>\[.+?\]))|\s(?P<ALLATTRJSON>\*)(?!(.+?)))|(?!(.+?)))))))"
+REGEX = r"((?P<LOAD>(((?P<LOADREQ>LOAD)|(?P<SAVEREQ>SAVE))\s(?(LOADREQ)((?P<LOADTREENAME>[a-zA-Z0-9_]+)\s(?P<FILEPATH>[a-zA-Z0-9_\.\/\-\s:]+))|(?P<SAVETREENAME>[a-zA-Z0-9_]+)(?!(.+?)))))|(?P<NONLOAD>((?P<GETREQ>GET)|(?P<PUTREQ>PUT)|(?P<DELREQ>DELETE)|(?P<SHOWREQ>SHOW))\s(?(SHOWREQ)(TREES)(?!(.+?))|(?(LOADREQ)(LOADTREE)(?!(.+?))|((?P<ATTR>ATTR)|(?P<TREE>TREE)))\s(?P<TREENAME>[a-zA-Z0-9_]+)\s(?(ATTR)(?P<ATTRREF>(SELF|CHILDREN|DESCENDANTS|ANCESTORS|PARENT))|(?P<TREEREF>(SELF|PARENT|CHILDREN)))\s(?P<SELECTOR>\{.*\})(?(PUTREQ)(\s(?P<PUTTREE>\{.+\}))|(?(ATTR)((\s(?P<ATTRLIST>\[.+?\]))|\s(?P<ALLATTRJSON>\*)(?!(.+?)))|(?!(.+?)))))))"
 expr = re.compile(REGEX)
 
 def parse_request(request):
@@ -24,6 +24,9 @@ def parse_request(request):
         parsed['path'] = groups['FILEPATH']
         parsed['tree'] = groups['LOADTREENAME']
         return parsed
+    if req == 'SAVE':
+        parsed['tree'] = groups['SAVETREENAME']
+        return parsed
 
     parsed['tree'] = groups['TREENAME']
     parsed['selector'] = groups['SELECTOR']
@@ -34,8 +37,8 @@ def parse_request(request):
         parsed['newtree'] = groups['PUTTREE']
         parsed['type'] = 'write'
     else:
-        parsed['type'] = 'write'       
-
+        parsed['type'] = 'write' 
+		
     if groups['ATTR']:
         parsed['reference'] = groups['ATTRREF']
         if groups['ATTRLIST']:

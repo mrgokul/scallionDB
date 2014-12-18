@@ -18,7 +18,7 @@ def evaluate(op1,op2,operator):
 
 def filterByRelation(keys,value,operator):
     if operator not in relational:
-        raise ValueError("Comaparison should be made with one of %s" %str(relational))
+        raise ValueError("Comparison should be made with one of %s" %str(relational))
     if operator == '_eq':
         return set(filter((lambda x: x == value), keys))
     if operator == '_neq':

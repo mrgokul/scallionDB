@@ -94,12 +94,15 @@ class Tree(dict):
 									str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])
             else:
+                if not self.PM.get(node['_id']):
+                    treeIDs.append(node['_id'])	
+                    continue
                 try:
                     self._delTree(node)
                 except:
                     raise Exception("Only %s out of %s nodes DELETED, %s\n%s"
-                					%(str(len(treeIDs)), str(len(nodes)), 
-									str(treeIDs), traceback.format_exc()))
+               	    	%(str(len(treeIDs)), str(len(nodes)), 
+				    	str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])	
         gc.collect()				
         return treeIDs          
@@ -122,6 +125,7 @@ class Tree(dict):
             parent = self.parentChildMap[node['_id']]
             if parent == '_ROOT':
                 return [self]
+            ret = [self.PM[parent]]
             return [self.PM[parent]]
         elif ref == 'ANCESTORS':
             retNodes = []
@@ -238,7 +242,8 @@ class Tree(dict):
             raise Exception(e)
 			
     def _delTree(self, node):
-        parent = self.GET(json.dumps({'_id':node['_id']}),'PARENT')[0]
+        par = self.GET(json.dumps({'_id':node['_id']}),'PARENT')
+        parent = par[0]
         index = parent['_children'].index(node)
         flatTree = flattenTree(node)
         for tree in flatTree:

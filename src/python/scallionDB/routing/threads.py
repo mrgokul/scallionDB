@@ -82,13 +82,18 @@ class BrokerThread(threading.Thread):
                     tree = frames.pop()
                     frontend.send_multipart(frames[1:])
                     if tree in writeTrees:
-                        self.flushCounter[tree] += 1
-                        if self.flushCounter[tree] >= self.flushLimit:
-                            frames[-1] = tree
-                            flusher.send_multipart(frames)
-                        else:
+                        if tree not in self.trees:
+                            del self.flushCounter[tree]
                             readTrees.remove(tree)
-                            writeTrees.remove(tree)
+                            writeTrees.remove(tree)                             
+                        else:
+                            self.flushCounter[tree] += 1
+                            if self.flushCounter[tree] >= self.flushLimit:
+                                frames[-1] = tree
+                                flusher.send_multipart(frames)
+                            else:
+                                readTrees.remove(tree)
+                                writeTrees.remove(tree)
                     else:
                         readTrees.remove(tree)
 
@@ -185,7 +190,8 @@ class BrokerThread(threading.Thread):
 			
 class WorkerThread(threading.Thread):
 
-    def __init__(self, context, hi, hl, interval, interval_max, trees):
+    def __init__(self, context, hi, hl, interval, interval_max,
+                	trees, folder):
         super(WorkerThread, self).__init__()
         self.context = context
         self.BEAT_INTERVAL = hi
@@ -203,6 +209,7 @@ class WorkerThread(threading.Thread):
         self.poller.register(self.worker, zmq.POLLIN)
 		
         self.trees = trees
+        self.folder = folder
 		
         print "Started Worker-" + self.identity
 
@@ -230,7 +237,7 @@ class WorkerThread(threading.Thread):
                     type, tree = parsed['type'], parsed['tree']
                     frames.insert(2,SDB_MESSAGE)
                     try:
-                        output = evaluate(self.trees,parsed)
+                        output = evaluate(self.trees,parsed,self.folder)
                         if isinstance(output, list):
                             if parsed['request'] == 'GET':
                                 frames[-1] = '['
@@ -321,9 +328,12 @@ class FlusherThread(threading.Thread):
                 frames = self.flusher.recv_multipart()
                 treename = frames[-1]
                 filename = os.path.join(self.folder, treename+'.tmp')
-                self.trees[treename].dump(filename)
-                newname = os.path.join(self.folder, treename+'.tree')
-                shutil.move(filename, newname)
+                try:
+                    self.trees[treename].dump(filename)
+                    newname = os.path.join(self.folder, treename+'.tree')
+                    shutil.move(filename, newname)
+                except:
+                    pass                   
                 self.flusher.send_multipart(frames)
                 				
 		

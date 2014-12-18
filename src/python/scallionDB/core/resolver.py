@@ -1,16 +1,21 @@
 import json
 import traceback
+import os
+import shutil
 from tree import Tree
 
-def evaluate(trees,parsed):
- 
+def evaluate(trees,parsed,folder):
     treename =  parsed['tree']
     if parsed['request'] == 'LOAD':
         if treename in trees:
             raise Exception("Tree with name %s already exists" %treename)
         tree = Tree(treename)
         trees[treename] = tree
-        return tree.LOAD(parsed['path'])
+        try:
+            return tree.LOAD(parsed['path'])
+        except Exception, e:
+            del trees[treename]
+            raise Exception(e)		
   
     selector = parsed['selector'] 
     reference = parsed['reference']
@@ -44,5 +49,13 @@ def evaluate(trees,parsed):
         else:
             if selector == '{}':
                 del trees[treename]
+                fn = os.path.join(folder, treename + '.tree')
+                os.path.exists(fn) and os.remove(fn)
                 return 'Tree %s deleted successfully' %treename
             return tree.DELETE(selector,reference)  
+    elif req == 'SAVE':
+        fname = os.path.join(folder, treename + '.tmp')
+        newname = os.path.join(folder, treename + '.tree')
+        tree.dump(fname)
+        shutil.move(fname, newname)
+		

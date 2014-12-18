@@ -155,8 +155,12 @@ class Tree(object):
 
         statement = ' '.join(["LOAD",self.name,path])						
         return send_request(self.request, statement)   
+		
+    def saveTree(self):
+        statement = ' '.join(["SAVE", self.name])
+        return send_request(self.request, statement)
     
-    def descTree(self,name):
+    def descTree(self):
         raise Exception("Need to think about what this will do")
 
         
