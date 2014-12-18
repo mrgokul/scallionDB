@@ -37,7 +37,7 @@ class BrokerThread(threading.Thread):
         frontend = self.context.socket(zmq.ROUTER) # ROUTER
         backend = self.context.socket(zmq.ROUTER)  # ROUTER
         flusher = self.context.socket(zmq.DEALER)  # ROUTER
-        frontend.bind("tcp://*:" + str(self.client_port) ) # For clients
+        frontend.bind("tcp://*:%s" %self.client_port) # For clients
         backend.bind("inproc://workers" )  # For workers
         flusher.bind("inproc://flusher" ) # For flusher
 		
@@ -335,5 +335,45 @@ class FlusherThread(threading.Thread):
                 except:
                     pass                   
                 self.flusher.send_multipart(frames)
+				
+class LoaderThread(threading.Thread):
+
+    def __init__(self, context, port, folder):
+        super(LoaderThread, self).__init__()
+        self.context = context
+        self.folder = folder
+		
+        self.loader = context.socket(zmq.DEALER) 	
+        self.identity = "%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
+        self.loader.setsockopt(zmq.IDENTITY, self.identity)
+        self.loader.setsockopt(zmq.LINGER, 0)
+        self.loader.connect("tcp://localhost:%s" %port)
+        self.poller = zmq.Poller()
+        self.poller.register(self.loader, zmq.POLLIN)
+		
+	
+    def run(self): 
+        i = 0 
+        j = 0
+        sent = False
+        while True:
+            if not sent:
+                for file in os.listdir(self.folder):
+                    if file.endswith('.tree'):
+                        treename = file.split('.tree')[0]
+                        frames = [''," ".join(['LOAD', treename, 
+		        		          os.path.join(self.folder, file)]),'1000000']
+                        self.loader.send_multipart(frames)
+                        i += 1
+	        sent = True
+            socks = dict(self.poller.poll(500)) 
+            if socks.get(self.loader) == zmq.POLLIN:
+                frames = self.loader.recv_multipart()
+                if frames:
+                    j += 1
+            if j == i:
+                return			
+
+                
                 				
 		
