@@ -12,7 +12,8 @@ def evaluate(trees,parsed,folder):
         tree = Tree(treename)
         trees[treename] = tree
         try:
-            return tree.LOAD(parsed['path'])
+            tree.LOAD(parsed['path'])
+            return treename
         except Exception, e:
             del trees[treename]
             raise Exception(e)		
@@ -57,5 +58,6 @@ def evaluate(trees,parsed,folder):
         fname = os.path.join(folder, treename + '.tmp')
         newname = os.path.join(folder, treename + '.tree')
         tree.dump(fname)
-        shutil.move(fname, newname)
+        shutil.move(fname, newname) 
+        return 'Successfuly saved tree %s' %treename
 		

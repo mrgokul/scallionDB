@@ -1,0 +1,29 @@
+2014-12-19 11:44:00,026 INFO   LOAD asd C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\asd.tree
+2014-12-19 11:44:00,887 INFO   LOAD ewe C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\ewe.tree
+2014-12-19 11:44:19,549 INFO   LOAD few C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\few.tree
+2014-12-19 11:44:21,095 INFO   LOAD pew C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\pew.tree
+2014-12-19 11:45:51,665 INFO   GET TREE few SELF {}
+2014-12-19 11:46:25,494 INFO   GET TREE few SELF {}
+2014-12-19 11:48:31,075 INFO   GET TREE few SELF {}
+2014-12-19 11:49:05,256 INFO   GET TREE few SELF {}
+2014-12-19 11:49:09,589 INFO   GET TREE few SELF {"_id": "3000"}
+2014-12-19 11:49:34,497 INFO   GET TREE few SELF {}
+2014-12-19 11:50:25,296 INFO   DELETE TREE few SELF {"_id": "6000"}
+2014-12-19 11:54:41,900 INFO   LOAD ewe C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\ewe.tree
+2014-12-19 11:54:42,788 INFO   LOAD asd C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\asd.tree
+2014-12-19 11:55:01,454 INFO   LOAD few C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\few.tree
+2014-12-19 11:55:02,990 INFO   LOAD pew C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\pew.tree
+2014-12-19 11:55:19,592 INFO   GET TREE few SELF {"_id": "6000"}
+2014-12-19 11:55:29,265 INFO   DELETE TREE few SELF {"_id": "6000"}
+2014-12-19 14:27:18,894 INFO   LOAD asd C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\asd.tree
+2014-12-19 14:27:20,401 INFO   LOAD ewe C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\ewe.tree
+2014-12-19 14:27:39,223 INFO   LOAD few C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\few.tree
+2014-12-19 14:27:40,799 INFO   LOAD pew C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\pew.tree
+2014-12-19 14:28:39,240 INFO   LOAD ewe C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\ewe.tree
+2014-12-19 14:28:40,065 INFO   LOAD asd C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\asd.tree
+2014-12-19 14:28:58,835 INFO   LOAD few C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\few.tree
+2014-12-19 14:29:00,438 INFO   LOAD pew C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\pew.tree
+2014-12-19 14:33:00 INFO   LOAD few C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\few.tree
+2014-12-19 14:33:01 INFO   LOAD ewe C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\ewe.tree
+2014-12-19 14:33:03 INFO   LOAD asd C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\asd.tree
+2014-12-19 14:33:05 INFO   LOAD pew C:\Users\Nachiappan.Palaniapp\Documents\GitHub\scallionDB\data\pew.tree

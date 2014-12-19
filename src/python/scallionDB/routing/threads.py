@@ -29,8 +29,6 @@ class BrokerThread(threading.Thread):
         self.trees = trees
         self.flushCounter = flushCounter
         self.flushLimit = flushLimit
-        
-        print "Started Broker"
 
     def run(self):
 	
@@ -191,7 +189,7 @@ class BrokerThread(threading.Thread):
 class WorkerThread(threading.Thread):
 
     def __init__(self, context, hi, hl, interval, interval_max,
-                	trees, folder):
+                	trees, chunksize, folder, commlog, errlog):
         super(WorkerThread, self).__init__()
         self.context = context
         self.BEAT_INTERVAL = hi
@@ -209,11 +207,11 @@ class WorkerThread(threading.Thread):
         self.poller.register(self.worker, zmq.POLLIN)
 		
         self.trees = trees
+        self.chunksize = chunksize
         self.folder = folder
-		
-        print "Started Worker-" + self.identity
-
- 		
+        self.commlog = commlog
+        self.errlog = errlog
+	 		
     def run(self):
         sdb_message = ['','',SDB_READY]
         self.worker.send_multipart(sdb_message)   
@@ -233,7 +231,8 @@ class WorkerThread(threading.Thread):
                 #  - 1-part HEARTBEAT -> heartbeat
                 frames = self.worker.recv_multipart()
                 if len(frames) == 3:
-                    parsed = parse_request(frames[-1])
+                    request = frames[-1]
+                    parsed = parse_request(request)
                     type, tree = parsed['type'], parsed['tree']
                     frames.insert(2,SDB_MESSAGE)
                     try:
@@ -246,7 +245,7 @@ class WorkerThread(threading.Thread):
                                 for out in output:
                                     breaker = treebreaker(out)
                                     while True:
-                                        if len(get) > 64*1024:
+                                        if len(get) > self.chunksize:
                                             frames[-1] = get
                                             self.worker.send_multipart(frames)
                                             get = ''
@@ -272,12 +271,14 @@ class WorkerThread(threading.Thread):
                         self.worker.send_multipart(frames)
                         del output
                         gc.collect()
+                        self.commlog.info(request.replace('\n',' '))
                     except:
                         err = traceback.format_exc()
                         frames[-2] = SDB_FAILURE
                         frames[-1] = err
                         frames.append(tree)
-                        self.worker.send_multipart(frames)		
+                        self.worker.send_multipart(frames)
+                        self.errlog.error(request.replace('\n',' '))						
      
                     liveness = self.BEAT_LIVENESS
                 elif len(frames) == 1 and frames[0] == SDB_HEARTBEAT:
@@ -304,7 +305,7 @@ class WorkerThread(threading.Thread):
 	
 class FlusherThread(threading.Thread):
 
-    def __init__(self, context, trees, flushCounter, folder):
+    def __init__(self, context, trees, flushCounter, folder, fllog, errlog):
         super(FlusherThread, self).__init__()
         self.context = context
         self.flushCounter = flushCounter
@@ -319,7 +320,9 @@ class FlusherThread(threading.Thread):
         self.poller = zmq.Poller()
         self.poller.register(self.flusher, zmq.POLLIN)
 		
-	
+        self.fllog = fllog
+        self.errlog = errlog
+			
     def run(self):
         while True:
             socks = dict(self.poller.poll(500))   
@@ -332,13 +335,14 @@ class FlusherThread(threading.Thread):
                     self.trees[treename].dump(filename)
                     newname = os.path.join(self.folder, treename+'.tree')
                     shutil.move(filename, newname)
+                    self.fllog.info("Flushed tree %s successfully" %treename)
                 except:
-                    pass                   
+                    self.errlog.error("Flushing tree %s failed" %treename)               
                 self.flusher.send_multipart(frames)
 				
 class LoaderThread(threading.Thread):
 
-    def __init__(self, context, port, folder):
+    def __init__(self, context, port, folder, conlogger):
         super(LoaderThread, self).__init__()
         self.context = context
         self.folder = folder
@@ -350,6 +354,7 @@ class LoaderThread(threading.Thread):
         self.loader.connect("tcp://localhost:%s" %port)
         self.poller = zmq.Poller()
         self.poller.register(self.loader, zmq.POLLIN)
+        self.logger = conlogger
 		
 	
     def run(self): 
@@ -369,7 +374,8 @@ class LoaderThread(threading.Thread):
             socks = dict(self.poller.poll(500)) 
             if socks.get(self.loader) == zmq.POLLIN:
                 frames = self.loader.recv_multipart()
-                if frames:
+                if len(frames) == 3:
+                    self.logger.info("Loaded tree %s successfully" %frames[-1])
                     j += 1
             if j == i:
                 return			

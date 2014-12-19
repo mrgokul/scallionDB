@@ -2,63 +2,78 @@ import sys, os, zmq
 sys.path.append(os.path.abspath('../src/python'))
 from scallionDB.routing import BrokerThread, WorkerThread, FlusherThread, LoaderThread
 from collections import Counter
+import ConfigParser
 import logging
 
+config = ConfigParser.ConfigParser()
+config_folder = os.path.abspath('../conf')
+config.read(os.path.join(config_folder,'scallion.conf'))
+
+PORT = config.get('INIT','PORT')
+HEARTBEAT_LIVENESS = int(config.get('INIT','HEARTBEAT_LIVENESS'))
+HEARTBEAT_INTERVAL = int(config.get('INIT','HEARTBEAT_INTERVAL'))
+EXPECTED_WORKER_PERFORMANCE = int(config.get('INIT','EXPECTED_WORKER_PERFORMANCE'))
+INTERVAL_INIT = int(config.get('INIT','INTERVAL_INIT'))
+INTERVAL_MAX = int(config.get('INIT','INTERVAL_MAX'))
+NBR_WORKERS = int(config.get('INIT','NBR_WORKERS'))
+flushLimit = int(config.get('INIT','flushLimit'))
+chunksize = int(config.get('INIT','chunksize'))
+folder = os.path.abspath(config.get('INIT','data_folder'))
+
 logfolder = os.path.abspath('../log')
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s',
+                              '%Y-%m-%d %H:%M:%S')
 
-logger = logging.getLogger('scallionDB')
-logger.setLevel(logging.DEBUG)
+commlog = logging.getLogger('commit')
+c_handler = logging.FileHandler(os.path.join(logfolder,'commit','commit.log'))
+c_handler.setFormatter(formatter)
+commlog.addHandler(c_handler)
+commlog.level = 20
 
-rlog = logging.StreamHandler()
-rlog.setLevel(logging.DEBUG)
-#rlog.setFormatter(formatter)
+errlog = logging.getLogger('error')
+err_handler = logging.FileHandler(os.path.join(logfolder,'error','error.log'))
+err_handler.setFormatter(formatter)
+errlog.addHandler(err_handler)
+errlog.level = 20
 
-flog = logging.FileHandler(os.path.join(logfolder,'flush','flush.log'))
-flog.setLevel(logging.DEBUG)
-flog.setFormatter(formatter)
+flushlog = logging.getLogger('flush')
+f_handler = logging.FileHandler(os.path.join(logfolder,'flush','flush.log'))
+f_handler.setFormatter(formatter)
+flushlog.addHandler(f_handler)
+flushlog.level = 20
 
-elog = logging.FileHandler(os.path.join(logfolder,'error','error.log'))
-elog.setLevel(logging.ERROR)
-elog.setFormatter(formatter)
-
-clog = logging.FileHandler(os.path.join(logfolder,'commit','commit.log'))
-clog.setLevel(logging.DEBUG)
-clog.setFormatter(formatter)
-
+consolelog = logging.getLogger('root')
+con_handler = logging.StreamHandler()
+con_handler.setFormatter(formatter)
+consolelog.addHandler(con_handler)
+consolelog.level = 20
 
 
 
 context = zmq.Context(1)
-PORT = 27890
-HEARTBEAT_LIVENESS = 3     
-HEARTBEAT_INTERVAL = 1.0  
-EXPECTED_WORKER_PERFORMANCE = 5.0
-INTERVAL_INIT = 1
-INTERVAL_MAX = 32
-NBR_WORKERS = 2
 trees = {}
 flushCounter = Counter()
-flushLimit = 2
-folder = os.path.abspath('../data')
 
 bthread = BrokerThread(context, PORT, HEARTBEAT_INTERVAL, 
                        HEARTBEAT_LIVENESS, EXPECTED_WORKER_PERFORMANCE,
  					   trees, flushCounter, flushLimit)
 					  
 bthread.start()
+consolelog.info('Started Broker')
 
 for _ in range(NBR_WORKERS):
     wthread = WorkerThread(context, HEARTBEAT_INTERVAL, HEARTBEAT_LIVENESS,
-                        INTERVAL_INIT, INTERVAL_MAX, trees, folder)						
+                           INTERVAL_INIT, INTERVAL_MAX, trees, chunksize,
+						   folder, commlog, errlog)						
     wthread.start()
-	
-fthread = FlusherThread(context, trees, flushCounter, folder)
+consolelog.info('Started Workers')	
+
+fthread = FlusherThread(context, trees, flushCounter, folder, flushlog, errlog)
 
 fthread.start()
 
-lthread = LoaderThread(context, PORT, folder)
-rlog.info('Started Loading trees')
+lthread = LoaderThread(context, PORT, folder, consolelog)
+consolelog.info('Started Loading trees')
 lthread.start()
 lthread.join()
-rlog.info('Finished Loading trees')
+consolelog.info('Finished Loading trees')

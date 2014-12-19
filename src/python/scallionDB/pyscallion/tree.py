@@ -8,7 +8,7 @@ class Tree(object):
         self.name = name
         self.request = request
         
-    def getNode(self,selector,reference="SELF"):
+    def getTree(self,selector,reference="SELF"):
         if reference.upper() not in tree_references:
             raise SyntaxError("Error: GETTREE - Invalid reference type."
              			      "Valid references are %s" %str(tree_references))
@@ -52,7 +52,7 @@ class Tree(object):
 		                   selector,attribute_list])						
         return send_request(self.request, statement)
         
-    def putNode(self,selector,tree,reference='SELF'):
+    def putTree(self,selector,tree,reference='SELF'):
 
         if reference.upper() not in tree_references:
             raise SyntaxError("Error: PUTTREE - Invalid reference type."
@@ -105,7 +105,7 @@ class Tree(object):
 		                      selector,attr_dict])							
         return send_request(self.request, statement)   
 		
-    def delNode(self,selector,reference="SELF"):
+    def delTree(self,selector,reference="SELF"):
         if reference.upper() not in tree_references:
             raise SyntaxError("Error: DELTREE - Invalid reference type."
              			      "Valid references are %s" %str(tree_references))
@@ -151,6 +151,7 @@ class Tree(object):
 		                      selector,attribute_list])
 							
         return send_request(self.request, statement)    
+		
     def loadTree(self,path):
 
         statement = ' '.join(["LOAD",self.name,path])						
