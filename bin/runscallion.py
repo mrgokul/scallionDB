@@ -4,6 +4,7 @@ from scallionDB.routing import BrokerThread, WorkerThread, FlusherThread, Loader
 from collections import Counter
 import ConfigParser
 import logging
+import time
 
 ''' 
   Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -74,6 +75,7 @@ bthread = BrokerThread(context, PORT, HEARTBEAT_INTERVAL,
 					  
 bthread.start()
 consolelog.info('Started Broker')
+time.sleep(1)
 
 for _ in range(NBR_WORKERS):
     wthread = WorkerThread(context, HEARTBEAT_INTERVAL, HEARTBEAT_LIVENESS,

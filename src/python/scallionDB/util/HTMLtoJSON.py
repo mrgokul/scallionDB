@@ -21,6 +21,8 @@ def constructJSON(soup, id=None):
     if id in soup.attrs:
         json['_id'] = json[id]
         del json[id]
+    if 'class' in soup.attrs:
+        json['class'] = ' '.join(soup.attrs['class'])
     json["_children"] = [constructJSON(child,id) for child in soup.contents
                         	if isinstance(child,bs4.element.Tag)]
     if not json["_children"]:

@@ -1,4 +1,4 @@
 #!/bin/bash
-nohup python run.py &
+nohup python runscallion.py &
 echo "Writing PID to scallion.pid file"
 echo $! > scallion.pid
