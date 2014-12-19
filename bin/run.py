@@ -34,7 +34,7 @@ flushLimit = int(config.get('INIT','flushLimit'))
 chunksize = int(config.get('INIT','chunksize'))
 folder = os.path.abspath(config.get('INIT','data_folder'))
 
-logfolder = os.path.abspath('../log')
+logfolder = os.path.abspath('../logs')
 formatter = logging.Formatter('%(asctime)s %(levelname)-6s %(message)s',
                               '%Y-%m-%d %H:%M:%S')
 
