@@ -72,7 +72,6 @@ class BrokerThread(threading.Thread):
             socks = dict(poller.poll(self.BEAT_INTERVAL * 1000))
             # Handle worker activity on backend
             if socks.get(backend) == zmq.POLLIN:
-                #print len(workers), mq, self.flushCounter, readTrees, writeTrees
                 # Use worker address for LRU routing
                 frames = backend.recv_multipart()
                 msg_type = frames[3]
@@ -296,15 +295,14 @@ class WorkerThread(threading.Thread):
      
                     liveness = self.BEAT_LIVENESS
                 elif len(frames) == 1 and frames[0] == SDB_HEARTBEAT:
-                    #print "I: Queue heartbeat"
                     liveness = self.BEAT_LIVENESS
                 interval = self.INTERVAL_INIT
             else:
                 liveness -= 1
                 liveness = max(liveness, 0)
                 if liveness == 0:
-                    #print "W: Heartbeat failure, can't reach queue"
-                    #print "W: Reconnecting in %0.2fs..." % interval
+                    self.errlog.warn("W: Heartbeat failure, can't reach queue.\
+                     Reconnecting in %0.2fs..." % interval)
                     time.sleep(interval)
         
                     if interval < self.INTERVAL_MAX:
@@ -313,7 +311,6 @@ class WorkerThread(threading.Thread):
                         break
             if time.time() > heartbeat_at:
                 heartbeat_at = time.time() + self.BEAT_INTERVAL
-                #print "I: Worker heartbeat"
                 hb_message = ['','',SDB_HEARTBEAT]
                 self.worker.send_multipart(hb_message)
 	
@@ -384,13 +381,19 @@ class LoaderThread(threading.Thread):
 		        		          os.path.join(self.folder, file)]),'1000000']
                         self.loader.send_multipart(frames)
                         i += 1
-	        sent = True
+            if i == 0:
+                self.logger.info("No existing trees to load")
+            sent = True
             socks = dict(self.poller.poll(500)) 
             if socks.get(self.loader) == zmq.POLLIN:
                 frames = self.loader.recv_multipart()
                 if len(frames) == 3:
-                    self.logger.info("Loaded tree %s successfully" %frames[-1])
-                    j += 1
+                    if frames[-2] != SDB_FAILURE:
+                        self.logger.info("Loaded %d of %d TREE '%s' successfully" 
+					                 %(j+1,i,frames[-1]))
+                        j += 1
+                    else:
+                        self.logger.error(frames[-1])
             if j == i:
                 return			
 

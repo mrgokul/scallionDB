@@ -40,7 +40,6 @@ class WorkerQueue(OrderedDict):
             if t > worker.expiry:  # Worker expired
                 expired.append(address)
         for address in expired:
-            print "W: Idle worker expired: %s" % address
             self.pop(address, None)
 
     def next(self):

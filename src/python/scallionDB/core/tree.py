@@ -66,8 +66,8 @@ class Tree(dict):
                 try:
                     treeID = self._putTree(node, tree, num)
                 except:
-                    raise Exception("Only %s out of %s nodes PUT, %s\n%s"
-                					%(str(len(treeIDs)), str(len(nodes)), 
+                    raise Exception("Only %d out of %d nodes PUT, %s\n%s"
+                					%(len(treeIDs), len(nodes), 
 									str(treeIDs),traceback.format_exc()))
                 treeIDs.append(treeID)
             else:
@@ -76,8 +76,8 @@ class Tree(dict):
                 try:
                     self._putAttrs(node, attrs)
                 except Exception, e:
-                    raise Exception("Only %s out of %s nodes ATTRS applied:, %s\n%s"
-                					%(str(len(treeIDs)), str(len(nodes)), 
+                    raise Exception("Only %d out of %d nodes ATTRS applied:, %s\n%s"
+                					%(len(treeIDs), len(nodes), 
 									str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])
             num -= 1
@@ -103,8 +103,8 @@ class Tree(dict):
                 try:
                     self._delAttrs(node,attrs)
                 except:
-                    raise Exception("Only %s out of %s nodes DELETED, %s\n%s"
-                					%(str(len(treeIDs)), str(len(nodes)), 
+                    raise Exception("Only %d out of %d nodes DELETED, %s\n%s"
+                					%(len(treeIDs), len(nodes), 
 									str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])
             else:
@@ -114,8 +114,8 @@ class Tree(dict):
                 try:
                     self._delTree(node)
                 except:
-                    raise Exception("Only %s out of %s nodes DELETED, %s\n%s"
-               	    	%(str(len(treeIDs)), str(len(nodes)), 
+                    raise Exception("Only %d out of %d nodes DELETED, %s\n%s"
+               	    	%(len(treeIDs), len(nodes), 
 				    	str(treeIDs), traceback.format_exc()))
                 treeIDs.append(node['_id'])	
         gc.collect()				

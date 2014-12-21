@@ -12,6 +12,7 @@
   limitations under the License.
  '''
 import zmq
+import time
 from zmq.error import Again    
 from constants import *
 
@@ -21,7 +22,12 @@ def send_request(socket, request):
     poller = zmq.Poller()
     poller.register(socket, zmq.POLLIN)
     msg = ''
+    start = time.time()
     while True:
+        if time.time() - start > timeout:
+            if not msg:
+                raise Exception("Request timed out after %d` \
+                                  seconds" %timeout)
         socks = dict(poller.poll(500))
         if socks.get(socket) == zmq.POLLIN:
             rec = socket.recv_multipart()

@@ -27,3 +27,5 @@ SDB_NONTREE = "\x04"    # For Non-tree statements, precedes response message
 SDB_MESSAGE = "\x05"    # For any message response, precedes response message
 SDB_COMPLETE = "\x06"   # For completed, precedes tree name
 SDB_FAILURE = "\x07"    # Failure message, precedes error message
+#Timeout
+timeout=10
