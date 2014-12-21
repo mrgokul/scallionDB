@@ -39,7 +39,7 @@ Let's agree on a format. '_id' represents a node and hence should be unique. '_c
 bin/scallion.py start
 ```
 
-### Using the client library
+### Using the client library 
 
 ```python
 import sys
@@ -50,5 +50,27 @@ client = ScallionClient()
 client.showTrees()
 #'[]'
 
+###Load a tree
+test = client['test']
+test.loadTree('test.json')
 
+###Get some nodes
+#Learn selector expressions
+selector = {"_or":[{"a":{"_gt":40}},{"a":{"_lt":-40}}]} #Get nodes where a > 40 or a < 40
+nodes = test.getTree(selector)
+#print nodes
+
+###Add some grandchildren 
+#Learn about references
+#reference = 'PARENT' adds sibling nodes
+#reference = 'SELF' adds child nodes
+#reference = 'CHILDREN' adds grandchildren
+gc = test.putTree(selector,{"hello":"world"},reference='CHILDREN')
+
+###Delete some attributes
+da = test.delAttrs({"hello":"world"},["b","bar"],'ANCESTORS')
+
+### Now get the full tree
+ft = test.getTree({})
+#print ft
 ```
