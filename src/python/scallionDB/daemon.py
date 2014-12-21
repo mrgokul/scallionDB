@@ -106,7 +106,8 @@ class Daemon:
             sys.stderr.write(message % self.pidfile)
             return # not an error in a restart
 
-        # Try killing the daemon process    
+        # Try killing the daemon process  
+        print 'Stopping...'		
         try:
             while 1:
                 os.kill(pid, SIGTERM)
@@ -119,6 +120,23 @@ class Daemon:
             else:
                 print str(err)
                 sys.exit(1)
+				
+    def status(self):
+        """
+        Get the status
+        """
+        # Get the pid from the pidfile
+        try:
+            pf = file(self.pidfile,'r')
+            pid = int(pf.read().strip())
+            pf.close()
+        except IOError:
+            pid = None
+        if pid:
+            print 'Running...'
+        else:
+            print 'Stopped'
+
 
     def restart(self):
         """
