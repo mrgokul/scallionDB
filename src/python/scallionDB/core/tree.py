@@ -32,27 +32,33 @@ class Tree(dict):
         self['_children'] = []
 		
     def GET(self,expr,ref,attrs=[]):
-        ids = self._getAllID(expr)
+        expr = json.loads(expr)
+        if isinstance(expr,dict):
+            expr = [expr]
+        ids = set(['_ROOT'])	
+        for exp in expr:
+            ids = self._getAllID(exp,ids)       		
         getNodes = []
         for id in ids:
-            nodes = self._getNodes(id,ref)
-            if attrs:
+            nodes = self._getNodes(id,ref)          
+            getNodes.extend(nodes)		
+        if not attrs:
+            return getNodes			
+        else:
+            getAttrs = []
+            for node in getNodes:			
                 if isinstance(attrs,list):
                     if '_id' not in attrs:
                         attrs.append('_id')
                     all = False
                 elif attrs == '*':
                     all = True
-                attrNodes = []
-                for node in nodes:
-                    if all:
-                        attr = [a for a in node.keys() if a != '_children']
-                    else:
-                        attr = attrs
-                    attrNodes.extend([{k:node.get(k,None) for k in attr}])
-                nodes = attrNodes
-            getNodes.extend(nodes)
-        return getNodes
+                if all:
+                    attr = [a for a in node.keys() if a != '_children']
+                else:
+                    attr = attrs
+                getAttrs.append({k:node.get(k,None) for k in attr})
+            return getAttrs
 			
     def PUT(self,expr,ref,tree={},attrs={}):
  
@@ -150,29 +156,29 @@ class Tree(dict):
                 retNodes.append(self.PM[id])
             return retNodes
            
-    def _getAllID(self,expr):
+    def _getAllID(self,expr,ids):
         prefix = Selector(expr).toPrefix()
         if not prefix:
             return set([self['_id']])
         if len(prefix) == 1:
-            return self._getIDset(prefix[0])
+            return self._getIDset(prefix[0],ids)
         operandStack = []
         while prefix:
             pop = prefix.pop()
             if isinstance(pop, Operator):
                 operand_1 = operandStack.pop()
                 if isinstance(operand_1, tuple):
-                    operand_1 = self._getIDset(operand_1)	
+                    operand_1 = self._getIDset(operand_1,ids)	
                 operand_2 = operandStack.pop()
                 if isinstance(operand_2, tuple):
-                    operand_2 = self._getIDset(operand_2)						
+                    operand_2 = self._getIDset(operand_2,ids)						
                 computed = evaluate(operand_1,operand_2,pop)
                 operandStack.append(computed)	
             else:
                 operandStack.append(pop)			
         return operandStack[0]
 			
-    def _getIDset(self, expr):
+    def _getIDset(self, expr,caps):
         attrKey = expr[0]
         attrValue = expr[1]
         operator = '_eq'
@@ -185,7 +191,14 @@ class Tree(dict):
         ids = set()
         for matchKey in matchKeys:
             ids.update(self.RI[attrKey][matchKey])
-        return ids
+        fids = set()
+        for id in ids:
+            fid = self.parentChildMap[id]
+            while fid not in caps:
+                fid = self.parentChildMap[fid]
+            else:
+                fids.add(id)					
+        return fids
                
     def _putTree(self,here,tree,num):
         if num > 1:

@@ -36,7 +36,7 @@ class OperatorTimesReference(object):
 class Selector(object):
 
     def __init__(self,expr):
-        self.expr = json.loads(expr)
+        self.expr = expr
 		
     def toPrefix(self):
         if not self.expr:

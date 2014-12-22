@@ -31,8 +31,15 @@ class Tree(object):
                 selector = json.dumps(selector)
             except:
                 raise SyntaxError("Error: GETTREE - Invalid JSON")
+        elif isinstance(selector,list):
+            if not all([isinstance(a,dict) for a in selector]):
+                raise SyntaxError("All elements in selector should be dict type")          
+            try:
+                selector = json.dumps(selector)
+            except:
+                raise SyntaxError("Error: GETTREE - Invalid JSON")		
         else:
-            raise SyntaxError("Error: GETTREE - Selector is not of type dict")
+            raise SyntaxError("Error: GETTREE - Selector is not of type dict or list")
         
         statement = ' '.join(["GET","TREE",str(self.name),
 		                      reference.upper(),selector])					
@@ -47,9 +54,16 @@ class Tree(object):
             try:
                 selector = json.dumps(selector)
             except:
-                raise SyntaxError("Error: GETATTR - Invalid Selector JSON")
+                raise SyntaxError("Error: GETATTR - Invalid JSON")
+        elif isinstance(selector,list):
+            if not all([isinstance(a,dict) for a in selector]):
+                raise SyntaxError("All elements in selector should be dict type")          
+            try:
+                selector = json.dumps(selector)
+            except:
+                raise SyntaxError("Error: GETATTR - Invalid JSON")		
         else:
-            raise SyntaxError("Error: GETATTR - Selector is not of type dict")
+            raise SyntaxError("Error: GETATTR - Selector is not of type dict or list")
 
         if not(isinstance(attribute_list,list) or attribute_list == '*'):
             raise SyntaxError("Error: GETATTR - attribute_list should be" 
@@ -71,13 +85,22 @@ class Tree(object):
         if reference.upper() not in tree_references:
             raise SyntaxError("Error: PUTTREE - Invalid reference type."
              			      "Valid references are %s" %str(tree_references))
+							  
         if isinstance(selector,dict):
             try:
                 selector = json.dumps(selector)
             except:
-                raise SyntaxError("Error: PUTTREE - Invalid JSON Selector")
+                raise SyntaxError("Error: PUTTREE - Invalid JSON")
+        elif isinstance(selector,list):
+            if not all([isinstance(a,dict) for a in selector]):
+                raise SyntaxError("All elements in selector should be dict type")          
+            try:
+                selector = json.dumps(selector)
+            except:
+                raise SyntaxError("Error: PUTTREE - Invalid JSON")		
         else:
-            raise SyntaxError("Error: PUTTREE - Selector is not of type dict")
+            raise SyntaxError("Error: PUTTREE - Selector is not of type dict or list")
+			
         if isinstance(tree,dict):
             try:
                 tree = json.dumps(tree)
@@ -98,9 +121,16 @@ class Tree(object):
             try:
                 selector = json.dumps(selector)
             except:
-                raise SyntaxError("Error: PUTATTR - Invalid JSON selector")
+                raise SyntaxError("Error: PUTATTR - Invalid JSON")
+        elif isinstance(selector,list):
+            if not all([isinstance(a,dict) for a in selector]):
+                raise SyntaxError("All elements in selector should be dict type")          
+            try:
+                selector = json.dumps(selector)
+            except:
+                raise SyntaxError("Error: PUTATTR - Invalid JSON")		
         else:
-            raise SyntaxError("Error: PUTATTR - selector is not of type dict")
+            raise SyntaxError("Error: PUTATTR - Selector is not of type dict or list")
 			
 
         if isinstance(attr_dict,dict):
@@ -123,13 +153,22 @@ class Tree(object):
         if reference.upper() not in tree_references:
             raise SyntaxError("Error: DELTREE - Invalid reference type."
              			      "Valid references are %s" %str(tree_references))
+							  
         if isinstance(selector,dict):
             try:
                 selector = json.dumps(selector)
             except:
-                raise SyntaxError("Error: DELTREE - Invalid selector JSON")
+                raise SyntaxError("Error: DELTREE - Invalid JSON")
+        elif isinstance(selector,list):
+            if not all([isinstance(a,dict) for a in selector]):
+                raise SyntaxError("All elements in selector should be dict type")          
+            try:
+                selector = json.dumps(selector)
+            except:
+                raise SyntaxError("Error: DELTREE - Invalid JSON")		
         else:
-            raise SyntaxError("Error: DELTREE - selector is not of type dict")
+            raise SyntaxError("Error: DELTREE - Selector is not of type dict or list")
+			
         statement = ' '.join(["DELETE","TREE",self.name,
 		                      reference.upper(),selector])
 							  	
@@ -140,13 +179,21 @@ class Tree(object):
         if reference.upper() not in references:
             raise SyntaxError("Error: DELATTR - Invalid reference type."
              			      "Valid references are %s" %str(references))
+							  
         if isinstance(selector,dict):
             try:
                 selector = json.dumps(selector)
             except:
-                raise SyntaxError("Error: DELATTR - Invalid Selector JSON")
+                raise SyntaxError("Error: DELATTR - Invalid JSON")
+        elif isinstance(selector,list):
+            if not all([isinstance(a,dict) for a in selector]):
+                raise SyntaxError("All elements in selector should be dict type")          
+            try:
+                selector = json.dumps(selector)
+            except:
+                raise SyntaxError("Error: DELATTR - Invalid JSON")		
         else:
-            raise SyntaxError("Error: DELATTR - Selector is not of type dict")
+            raise SyntaxError("Error: DELATTR - Selector is not of type dict or list")
 			
         if not(isinstance(attribute_list,list) or attribute_list == '*'):
             raise SyntaxError("Error: DELATTR - attribute_list should be" 

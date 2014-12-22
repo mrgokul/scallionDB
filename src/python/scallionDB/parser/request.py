@@ -22,8 +22,6 @@ expr = re.compile(REGEX)
 
 def parse_request(request):
     groups = expr.finditer(request).next().groupdict()
-    if groups['SELECTOR']:
-        Selector(groups['SELECTOR']).toPrefix()
     parsed = {'type':None, 'request':None, 'attrs':None,'newtree':None,
               'selector':None, 'tree':None, 'path':None, 'reference':None}
 
