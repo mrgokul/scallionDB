@@ -12,4 +12,4 @@
   limitations under the License.
  '''
 
-from threads import BrokerThread, WorkerThread, FlusherThread, LoaderThread
+from threads import BrokerThread, WorkerThread, SaverThread, LoaderThread

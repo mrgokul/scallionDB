@@ -33,7 +33,7 @@ from scallionDB.core import evaluate, treebreaker
 class BrokerThread(threading.Thread):
 
     def __init__(self, context, client_port, hi, hl, ewp, trees, 
-	             flushCounter, flushLimit):
+	             saveCounter, saveLimit):
         super(BrokerThread, self).__init__()
         self.context = context
         self.client_port = str(client_port)
@@ -41,26 +41,26 @@ class BrokerThread(threading.Thread):
         self.BEAT_LIVENESS = hl
         self.EXPECTED_PERFORMANCE = ewp
         self.trees = trees
-        self.flushCounter = flushCounter
-        self.flushLimit = flushLimit
+        self.saveCounter = saveCounter
+        self.saveLimit = saveLimit
 
     def run(self):
 	
         frontend = self.context.socket(zmq.ROUTER) # ROUTER
         backend = self.context.socket(zmq.ROUTER)  # ROUTER
-        flusher = self.context.socket(zmq.DEALER)  # ROUTER
+        saveer = self.context.socket(zmq.DEALER)  # ROUTER
         frontend.bind("tcp://*:%s" %self.client_port) # For clients
         backend.bind("inproc://workers" )  # For workers
-        flusher.bind("inproc://flusher" ) # For flusher
+        saveer.bind("inproc://saveer" ) # For saveer
 		
         frontend.setsockopt(zmq.LINGER, 0)
         backend.setsockopt(zmq.LINGER, 0)
-        flusher.setsockopt(zmq.LINGER, 0)
+        saveer.setsockopt(zmq.LINGER, 0)
 		 
         poller = zmq.Poller()
         poller.register(frontend, zmq.POLLIN)
         poller.register(backend, zmq.POLLIN)
-        poller.register(flusher, zmq.POLLIN)
+        poller.register(saveer, zmq.POLLIN)
         
         workers = WorkerQueue()
         mq = [] #non FIFO queue
@@ -94,14 +94,14 @@ class BrokerThread(threading.Thread):
                     frontend.send_multipart(frames[1:])
                     if tree in writeTrees:
                         if tree not in self.trees:
-                            del self.flushCounter[tree]
+                            del self.saveCounter[tree]
                             readTrees.remove(tree)
                             writeTrees.remove(tree)                             
                         else:
-                            self.flushCounter[tree] += 1
-                            if self.flushCounter[tree] >= self.flushLimit:
+                            self.saveCounter[tree] += 1
+                            if self.saveCounter[tree] >= self.saveLimit:
                                 frames[-1] = tree
-                                flusher.send_multipart(frames)
+                                saveer.send_multipart(frames)
                             else:
                                 readTrees.remove(tree)
                                 writeTrees.remove(tree)
@@ -191,12 +191,12 @@ class BrokerThread(threading.Thread):
                         msg = Message(frames, tree, timeout, type)
                         mq.append(msg)
 						
-            if socks.get(flusher) == zmq.POLLIN: 
-                frames = flusher.recv_multipart()
+            if socks.get(saveer) == zmq.POLLIN: 
+                frames = saveer.recv_multipart()
                 treename = frames[-1]                              
                 readTrees.remove(tree)
                 writeTrees.remove(tree)        
-                self.flushCounter[tree] = 0
+                self.saveCounter[tree] = 0
             workers.purge()
 			
 class WorkerThread(threading.Thread):
@@ -314,22 +314,22 @@ class WorkerThread(threading.Thread):
                 hb_message = ['','',SDB_HEARTBEAT]
                 self.worker.send_multipart(hb_message)
 	
-class FlusherThread(threading.Thread):
+class SaverThread(threading.Thread):
 
-    def __init__(self, context, trees, flushCounter, folder, fllog, errlog):
-        super(FlusherThread, self).__init__()
+    def __init__(self, context, trees, saveCounter, folder, fllog, errlog):
+        super(SaverThread, self).__init__()
         self.context = context
-        self.flushCounter = flushCounter
+        self.saveCounter = saveCounter
         self.trees = trees	
         self.folder = folder
 		
-        self.flusher = context.socket(zmq.DEALER) 	
+        self.saveer = context.socket(zmq.DEALER) 	
         self.identity = "%04X-%04X" % (randint(0, 0x10000), randint(0, 0x10000))
-        self.flusher.setsockopt(zmq.IDENTITY, self.identity)
-        self.flusher.setsockopt(zmq.LINGER, 0)
-        self.flusher.connect("inproc://flusher")
+        self.saveer.setsockopt(zmq.IDENTITY, self.identity)
+        self.saveer.setsockopt(zmq.LINGER, 0)
+        self.saveer.connect("inproc://saveer")
         self.poller = zmq.Poller()
-        self.poller.register(self.flusher, zmq.POLLIN)
+        self.poller.register(self.saveer, zmq.POLLIN)
 		
         self.fllog = fllog
         self.errlog = errlog
@@ -337,9 +337,9 @@ class FlusherThread(threading.Thread):
     def run(self):
         while True:
             socks = dict(self.poller.poll(500))   
-            # Handle flushing activity 
-            if socks.get(self.flusher) == zmq.POLLIN:
-                frames = self.flusher.recv_multipart()
+            # Handle saveing activity 
+            if socks.get(self.saveer) == zmq.POLLIN:
+                frames = self.saveer.recv_multipart()
                 treename = frames[-1]
                 filename = os.path.join(self.folder, treename+'.tmp')
                 try:
@@ -349,7 +349,7 @@ class FlusherThread(threading.Thread):
                     self.fllog.info("Flushed tree %s successfully" %treename)
                 except:
                     self.errlog.error("Flushing tree %s failed" %treename)               
-                self.flusher.send_multipart(frames)
+                self.saveer.send_multipart(frames)
 				
 class LoaderThread(threading.Thread):
 

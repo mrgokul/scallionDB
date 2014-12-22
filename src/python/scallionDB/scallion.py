@@ -18,7 +18,7 @@ import ConfigParser
 import logging
 import time
 
-from routing import BrokerThread, WorkerThread, FlusherThread, LoaderThread
+from routing import BrokerThread, WorkerThread, SaverThread, LoaderThread
 from collections import Counter
 
 
@@ -34,7 +34,7 @@ def start(path):
     INTERVAL_INIT = int(config.get('INIT','INTERVAL_INIT'))
     INTERVAL_MAX = int(config.get('INIT','INTERVAL_MAX'))
     NBR_WORKERS = int(config.get('INIT','NBR_WORKERS'))
-    flushLimit = int(config.get('INIT','flushLimit'))
+    saveLimit = int(config.get('INIT','saveLimit'))
     chunksize = int(config.get('INIT','chunksize'))
     folder = config.get('INIT','data_folder')
     if folder.startswith('..'):
@@ -56,11 +56,11 @@ def start(path):
     errlog.addHandler(err_handler)
     errlog.level = 20
     
-    flushlog = logging.getLogger('flush')
-    f_handler = logging.FileHandler(os.path.join(logfolder,'flush','flush.log'))
+    savelog = logging.getLogger('save')
+    f_handler = logging.FileHandler(os.path.join(logfolder,'save','save.log'))
     f_handler.setFormatter(formatter)
-    flushlog.addHandler(f_handler)
-    flushlog.level = 20
+    savelog.addHandler(f_handler)
+    savelog.level = 20
     
     consolelog = logging.getLogger('root')
     con_handler = logging.StreamHandler()
@@ -70,11 +70,11 @@ def start(path):
     
     context = zmq.Context(1)
     trees = {}
-    flushCounter = Counter()
+    saveCounter = Counter()
 
     bthread = BrokerThread(context, PORT, HEARTBEAT_INTERVAL, 
                            HEARTBEAT_LIVENESS, EXPECTED_WORKER_PERFORMANCE,
-     					   trees, flushCounter, flushLimit)
+     					   trees, saveCounter, saveLimit)
     					  
     bthread.start()
     consolelog.info('Started Broker')
@@ -87,9 +87,9 @@ def start(path):
         wthread.start()
     consolelog.info('Started Workers')	
     
-    fthread = FlusherThread(context, trees, flushCounter, folder, flushlog, errlog)
+    sthread = SaverThread(context, trees, saveCounter, folder, savelog, errlog)
     
-    fthread.start()
+    sthread.start()
     
     lthread = LoaderThread(context, PORT, folder, consolelog)
     consolelog.info('Started Loading trees')
