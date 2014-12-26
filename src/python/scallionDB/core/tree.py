@@ -39,25 +39,30 @@ class Tree(dict):
         for exp in expr:
             ids = self._getAllID(exp,ids)       		
         getNodes = []
+        attrNodes = []
         for id in ids:
             nodes = self._getNodes(id,ref)          
-            getNodes.extend(nodes)		
+            getNodes.extend(nodes)	
+            attrNodes.append(nodes)			
         if not attrs:
             return getNodes			
         else:
             getAttrs = []
-            for node in getNodes:			
-                if isinstance(attrs,list):
-                    if '_id' not in attrs:
-                        attrs.append('_id')
-                    all = False
-                elif attrs == '*':
-                    all = True
-                if all:
-                    attr = [a for a in node.keys() if a != '_children']
-                else:
-                    attr = attrs
-                getAttrs.append({k:node.get(k,None) for k in attr})
+            for nodes in attrNodes:	
+                temp = []  
+                for node in nodes			
+                    if isinstance(attrs,list):
+                        if '_id' not in attrs:
+                            attrs.append('_id')
+                        all = False
+                    elif attrs == '*':
+                        all = True
+                    if all:
+                        attr = [a for a in node.keys() if a != '_children']
+                    else:
+                        attr = attrs
+                    temp.append({k:node.get(k,None) for k in attr})
+                getAttrs.append(temp)
             return getAttrs
 			
     def PUT(self,expr,ref,tree={},attrs={}):
@@ -127,34 +132,32 @@ class Tree(dict):
         gc.collect()				
         return treeIDs          
 			
-    def _getNodes(self,id,ref):
-        if id == '_ROOT':
-            return [self]
-        if not self.PM.has_key(id):
-            return []
-        if ref == 'SELF':
-            return [self.PM[id]]
-        elif ref == 'CHILDREN':
-            return self.PM[id]['_children']
-        elif ref == 'DESCENDANTS':
-            retNodes = []
-            for node in self.PM[id]['_children']:
-                retNodes.extend(flattenTree(node))
-        elif ref == 'PARENT':
-            node = self.PM[id]
-            parent = self.parentChildMap[node['_id']]
-            if parent == '_ROOT':
-                return [self]
-            ret = [self.PM[parent]]
-            return [self.PM[parent]]
-        elif ref == 'ANCESTORS':
-            retNodes = []
-            while True:
-                id = self.parentChildMap[self.PM[id]['_id']]
-                if id == '_ROOT':
-                    break
-                retNodes.append(self.PM[id])
-            return retNodes
+    def _getNodes(self,id,refs):
+        ret = []
+        for ref in json.loads(refs):
+            if id == '_ROOT':
+                ret.append(self)
+            if not self.PM.has_key(id):
+                continue
+            if ref == 'SELF':
+                ret.append(self.PM[id])
+            elif ref == 'CHILDREN':
+                ret.append(self.PM[id]['_children'])
+            elif ref == 'DESCENDANTS':
+                for node in self.PM[id]['_children']:
+                    ret.extend(flattenTree(node))
+            elif ref == 'PARENT':
+                node = self.PM[id]
+                parent = self.parentChildMap[node['_id']]
+                if parent != '_ROOT':
+                    ret.append(self.PM[parent])
+            elif ref == 'ANCESTORS':
+                while True:
+                    id = self.parentChildMap[self.PM[id]['_id']]
+                    if id == '_ROOT':
+                        break
+                    ret.append(self.PM[id])
+        return ret
            
     def _getAllID(self,expr,ids):
         prefix = Selector(expr).toPrefix()

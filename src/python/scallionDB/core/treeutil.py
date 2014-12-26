@@ -87,6 +87,9 @@ def reduceToNode(node,num):
 def treebreaker(tree):	
 	
     childStack = []
+    if not isinstance(tree,dict):
+        yield json.dumps(tree)
+        raise StopIteration        
     if not tree.has_key('_children'):
         yield json.dumps(tree)
         raise StopIteration
