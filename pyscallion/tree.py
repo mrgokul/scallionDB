@@ -56,8 +56,8 @@ class Tree(object):
                 if ref.upper() not in tree_references:
                     raise SyntaxError("Error: GETATTR - Invalid reference type."
                                "Valid references are %s" %str(tree_references))
-            validator = [all(["PARENT" in reference,"ANCESTORS" in reference])],
-                          [all(["CHILDREN" in reference,"DESCENDANTS" in reference])]
+            validator = [all(["PARENT" in reference,"ANCESTORS" in reference]),\
+                          all(["CHILDREN" in reference,"DESCENDANTS" in reference])]
             if any(validator):
                 if validator[0]:
                     raise SyntaxError("Error: GETATTR - Invalid References."
@@ -139,8 +139,8 @@ class Tree(object):
                 if ref.upper() not in tree_references:
                     raise SyntaxError("Error: PUTATTRS - Invalid reference type."
                                "Valid references are %s" %str(tree_references))
-            validator = [all(["PARENT" in reference,"ANCESTORS" in reference])],
-                          [all(["CHILDREN" in reference,"DESCENDANTS" in reference])]
+            validator = [all(["PARENT" in reference,"ANCESTORS" in reference]),\
+                          all(["CHILDREN" in reference,"DESCENDANTS" in reference])]
             if any(validator):
                 if validator[0]:
                     raise SyntaxError("Error: PUTATTRS - Invalid References."
@@ -218,8 +218,8 @@ class Tree(object):
                 if ref.upper() not in tree_references:
                     raise SyntaxError("Error: DELATTR - Invalid reference type."
                                "Valid references are %s" %str(tree_references))
-            validator = [all(["PARENT" in reference,"ANCESTORS" in reference])],
-                          [all(["CHILDREN" in reference,"DESCENDANTS" in reference])]
+            validator = [all(["PARENT" in reference,"ANCESTORS" in reference]),\
+                          all(["CHILDREN" in reference,"DESCENDANTS" in reference])]
             if any(validator):
                 if validator[0]:
                     raise SyntaxError("Error: DELATTR - Invalid References."
