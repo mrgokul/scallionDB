@@ -31,7 +31,6 @@ class WorkerQueue(OrderedDict):
         else:
             self[worker.address].expiry = time.time() + worker.ewp * worker.hl 
 
-
     def purge(self):
         """Look for & kill expired workers."""
         t = time.time()

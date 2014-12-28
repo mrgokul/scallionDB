@@ -45,12 +45,12 @@ class Tree(dict):
             getNodes.extend(nodes)	
             attrNodes.append(nodes)			
         if not attrs:
-            return getNodes			
+            return getNodes					
         else:
             getAttrs = []
             for nodes in attrNodes:	
                 temp = []  
-                for node in nodes			
+                for node in nodes:			
                     if isinstance(attrs,list):
                         if '_id' not in attrs:
                             attrs.append('_id')
@@ -59,9 +59,13 @@ class Tree(dict):
                         all = True
                     if all:
                         attr = [a for a in node.keys() if a != '_children']
+                        attr.append('$children')
                     else:
                         attr = attrs
-                    temp.append({k:node.get(k,None) for k in attr})
+                    select = {k:node.get(k) for k in attr if k in node}
+                    if '$children' in attr:
+                        select['$children'] = [c['_id'] for c in node['_children']]
+                    temp.append(select)
                 getAttrs.append(temp)
             return getAttrs
 			
@@ -134,7 +138,7 @@ class Tree(dict):
 			
     def _getNodes(self,id,refs):
         ret = []
-        for ref in json.loads(refs):
+        for ref in refs.split(','):
             if id == '_ROOT':
                 ret.append(self)
             if not self.PM.has_key(id):
@@ -208,33 +212,36 @@ class Tree(dict):
             tree = deepcopy(tree)
         attrsMap = {}		
         traverser = traverse(tree)
-        while True:
-            try:
-                node = traverser.next()
-            except StopIteration:
-                break
-            parentID = self._setID(node)
-            self.PM[parentID] = node			
-            for k,v in node.iteritems():
-                if k!='_id' and k!='_children' and not isinstance(v,dict)\
-                    and not isinstance(v,list):
-                    if attrsMap.has_key(k):
-                        if attrsMap[k].has_key(v):
-                            attrsMap[k][v].add(parentID)
-                        else:
-                            attrsMap[k][v] = set([parentID])
-                    else:   			
-                        attrsMap[k] = {v:set([parentID])}  				
-            children = node['_children']
-            if not isinstance(children,list):
-                raise TypeError("_children attribute should be of Array Type")
-            for child in children:   
-                id = self._setID(child)
-                self.parentChildMap[id] = parentID 	
-				
-        self.parentChildMap[tree['_id']] = here['_id']  				
-        here['_children'].append(tree)
         try:
+            while True:
+                try:
+                    node = traverser.next()
+                except StopIteration:
+                    break
+                parentID = self._setID(node)
+                self.PM[parentID] = node			
+                for k,v in node.iteritems():
+                    if isinstance(k,basestring) and k.startswith('$'):
+                        raise TypeError("attribute cannot start with '$'")
+                    if k!='_id' and k!='_children' and not isinstance(v,dict)\
+                        and not isinstance(v,list):
+                        if attrsMap.has_key(k):
+                            if attrsMap[k].has_key(v):
+                                attrsMap[k][v].add(parentID)
+                            else:
+                                attrsMap[k][v] = set([parentID])
+                        else:   			
+                            attrsMap[k] = {v:set([parentID])}  				
+                children = node['_children']
+                if not isinstance(children,list):
+                    raise TypeError("_children attribute should be of Array Type")
+                for child in children:   
+                    id = self._setID(child)
+                    self.parentChildMap[id] = parentID 	
+		    		
+            self.parentChildMap[tree['_id']] = here['_id']  				
+            here['_children'].append(tree)
+  
             for attr,valMap in attrsMap.iteritems():
                 for val, map in valMap.iteritems():			
                     if self.RI.has_key(attr):
@@ -246,7 +253,7 @@ class Tree(dict):
                         self.RI[attr] = {val:map} 		
             return tree['_id']
         except Exception, e:
-            self.DELETE(tree)
+            self._delTree(tree,here)
             raise Exception(e)
 
     def _putAttrs(self, here, attrs):
@@ -271,17 +278,22 @@ class Tree(dict):
             self._delAttrs(here,attrs.keys(),oldAttrs)
             raise Exception(e)
 			
-    def _delTree(self, node):
-        par = self.GET(json.dumps({'_id':node['_id']}),'PARENT')
-        parent = par[0]
-        index = parent['_children'].index(node)
+    def _delTree(self, node, parent=None):
+        if not parent:
+            parent = self.GET(json.dumps({'_id':node['_id']}),'PARENT')[0]
+        try:
+            index = parent['_children'].index(node)
+        except ValueError:
+            index = -1
         flatTree = flattenTree(node)
         for tree in flatTree:
             self._delAttrs(tree)
-            del self.PM[tree['_id']]
-            del self.parentChildMap[tree['_id']]
-            
-        del parent['_children'][index]
+            if self.PM.has_key(tree['_id']):
+                del self.PM[tree['_id']]
+            if self.parentChildMap.has_key(tree['_id']):
+                del self.parentChildMap[tree['_id']]
+        if index > -1:           
+            del parent['_children'][index]
 						
     def _delAttrs(self,here,attrs='*',replace={}):
         if attrs == '*':
@@ -295,10 +307,11 @@ class Tree(dict):
                     if self.RI.has_key(k):
                         if self.RI[k].has_key(v):
                             self.RI[k][v].remove(here['_id'])
-                if not self.RI[k][v]:
-                    del self.RI[k][v]
-                if not self.RI[k]:
-                    del self.RI[k]
+                if self.RI.has_key(k) and self.RI[k].has_key(v):
+                    if not self.RI[k][v]:
+                        del self.RI[k][v]
+                    if not self.RI[k]:
+                        del self.RI[k]
 						
             if replace.has_key(k):
                 oldVal = replace[k]

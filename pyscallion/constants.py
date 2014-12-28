@@ -18,7 +18,7 @@ id_type = '_eq'
 requests = ['GET','PUT','DELETE','LOAD','SHOW','DESCRIBE','SAVE']
 resources = ['TREE','ATTR']
 references = ['ANCESTORS','PARENT','SELF','CHILDREN','DESCENDANTS']
-tree_references = ['PARENT','SELF','CHILDREN']
+tree_references = ['SELF','PARENT']
 #  ScallionDB Protocol constants
 SDB_READY = "\x01"      # Signals worker is ready
 SDB_HEARTBEAT = "\x02"  # Signals worker heartbeat

@@ -30,7 +30,7 @@ def evaluate(trees,parsed,folder):
             return treename
         except Exception, e:
             del trees[treename]
-            raise Exception(e)		
+            raise Exception(traceback.format_exc())	
   
     selector = parsed['selector'] 
     reference = parsed['reference']
