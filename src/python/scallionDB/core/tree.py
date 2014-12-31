@@ -175,23 +175,17 @@ class Tree(dict):
             if isinstance(pop, Operator):
                 operand_1 = operandStack.pop()
                 if isinstance(operand_1, tuple):
-                    operand_1, minus_1 = self._getIDset(operand_1,ids)	
+                    operand_1 = self._getIDset(operand_1,ids)	
                 operand_2 = operandStack.pop()
                 if isinstance(operand_2, tuple):
-                    operand_2, minus_2 = self._getIDset(operand_2,ids)
-                if minus_1:
-                    computed = evaluate(operand_1,operand_2,pop,True)
-                elif minus_2:					
-                    computed = evaluate(operand_2,operand_1,pop,True)       
-                else:
-                    computed = evaluate(operand_2,operand_1,pop)                         				
+                    operand_2 = self._getIDset(operand_2,ids)						
+                computed = evaluate(operand_1,operand_2,pop)
                 operandStack.append(computed)	
             else:
                 operandStack.append(pop)			
         return operandStack[0]
 			
     def _getIDset(self, expr,caps):
-        minus = False
         attrKey = expr[0]
         attrValue = expr[1]
         operator = '_eq'
@@ -214,7 +208,7 @@ class Tree(dict):
                 childIDs = self._getAllID(_or,['_ROOT'])
                 childset.update(set([self.parentChildMap[id] 
 				                for id in childIDs]))
-            return minus, childset
+            return childset - set(['_ROOT'])
         if attrKey == '$desc':
             descset = set()   
             i = 0
@@ -244,10 +238,17 @@ class Tree(dict):
                         ids.add(fid)
                         fid = self.parentChildMap[fid]
                 descset.update(ids)		
-            return minus, descset
+            return descset
 			
         if isinstance(attrValue,dict):
             operator, attrValue = attrValue.items()[0] 
+			
+        if operator == '_exists':
+            if attrValue:
+                return reduce(lambda x, y : x |y, self.RI[attrKey].values()) 
+            else:
+                return set(self.PM.keys()) - reduce(lambda x, y : x |y,
+                                     				self.RI[attrKey].values()) 
                 			
         matchKeys = filterByRelation(self.RI.get(attrKey,dict()).keys(),
 		                             attrValue,operator)
@@ -261,7 +262,7 @@ class Tree(dict):
                 fid = self.parentChildMap[fid]
             else:
                 fids.add(id)					
-        return minus, fids
+        return fids
                
     def _putTree(self,here,tree,num):
         if num > 1:

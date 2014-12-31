@@ -12,7 +12,9 @@
   limitations under the License.
  '''
 logical = ['_and','_or']
-relational = ['_eq','_neq','_lte','_gte','_lt','_gt','_regex']
+path_logical = ['$&','$|']
+path = ['$child','$desc']
+relational = ['_eq','_neq','_lte','_gte','_lt','_gt','_regex','_exists']
 id_type = '_eq'
 requests = ['GET','PUT','DELETE','LOAD','SHOW','DESCRIBE','SAVE']
 request_types = {'GETREQ':'GET',

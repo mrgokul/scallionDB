@@ -40,6 +40,8 @@ class Selector(object):
         self.expr = expr
 		
     def toPrefix(self):
+        if not isinstance(self.expr,dict):
+            raise SyntaxError("Selector must be dict type")            
         if not self.expr:
             return self.expr
         if len(self.expr) == 1 :
@@ -108,14 +110,25 @@ class Selector(object):
         elif k == '$child' or k == '$desc':
             if not isinstance(v, dict):
                 raise SyntaxError("$child or $desc should be of dict type")
+            keys = set(v.keys())
+            if not keys.issubset(set(path_logical)):
+                 raise SyntaxError("$child or $desc keys can only be of %s"
+				                    %(str(path_logical),)) 
+            values = v.values()
+            if not all([isinstance(l,list) for l in values]):   
+                raise SyntaxError("$child or $desc values should be array type")                			
         else:
             if isinstance(v, list):
                 raise SyntaxError("Array comparison not supported")
             if isinstance(v, dict):
                 if(len(v) > 1) or v.keys()[0] not in relational:
-                    raise SyntaxError("Only one of %s operators accepted"
-                    					%(str(relational),))
+                    raise SyntaxError("Only one of %s operators or %s logical_paths"
+                    				  " accepted" %(str(relational),str(path_logical)))
+ 
                 val = v.values()[0]
+                if v.keys()[0] == '_exists':
+                    if not isinstance(val, bool):
+                        raise SyntaxError("_exists should be of boolean type")                      
                 if isinstance(val,dict) or isinstance(val,list):
                     raise SyntaxError("Comparison of Array/Object type not accepted")				
 				
