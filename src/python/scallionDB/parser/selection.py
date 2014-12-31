@@ -32,6 +32,7 @@ class OperatorTimesReference(object):
         self.operator = Operator(operator)
         self.reference = reference
         self.times = 0
+
 			
 class Selector(object):
 
@@ -64,7 +65,7 @@ class Selector(object):
             raise SyntaxError("Expecting array type for operator %s" %(operator,))
         if not all([isinstance(i,dict) for i in items]):
             raise SyntaxError("Expecting all Object type for items in operator %s"
-                    			%(operator,))		
+                    			%(operator,))								
         if len(items) < 2:
             raise SyntaxError("At least two array items required in operator %s"
                     			%(operator,))		
@@ -75,7 +76,11 @@ class Selector(object):
                 if k in logical:
                     self._evalOperator(k,v)
                 else:
-                    self._evalOperand(k,v)   				
+                    if len(item) > 1:
+                        self.prefix.extend(Selector(item).toPrefix())
+                        break
+                    else:
+                        self._evalOperand(k,v)   				
     	self.operatorStack.pop()
     
     def _evalOperand(self,k,v):
@@ -100,6 +105,9 @@ class Selector(object):
                     raise SyntaxError("_id should be alphanumeric")
             else:
                 raise SyntaxError("_id should be alphanumeric")
+        elif k == '$child' or k == '$desc':
+            if not isinstance(v, dict):
+                raise SyntaxError("$child or $desc should be of dict type")
         else:
             if isinstance(v, list):
                 raise SyntaxError("Array comparison not supported")
