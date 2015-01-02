@@ -17,6 +17,7 @@ import json
 from scallionDB.parser.selection import Selector, Operator
 from treeutil import evaluate, flattenTree, traverse, generateID
 from treeutil import  filterByRelation, treebreaker
+from dateutil import parser as tsparser
 from copy import deepcopy
 
 import gc, traceback
@@ -27,6 +28,7 @@ class Tree(dict):
         self.name = name
         self.RI = {}
         self.PM = {}
+        self.tsAttrs = {}
         self.parentChildMap = {}		
         self['_id'] = '_ROOT'		
         self['_children'] = []
@@ -245,10 +247,15 @@ class Tree(dict):
 			
         if operator == '_exists':
             if attrValue:
-                return reduce(lambda x, y : x |y, self.RI[attrKey].values()) 
+                return set.union(*self.RI[attrKey].values())
             else:
-                return set(self.PM.keys()) - reduce(lambda x, y : x |y,
-                                     				self.RI[attrKey].values()) 
+                return set(self.PM.keys()) - set.union(*self.RI[attrKey].values())
+				
+        if attrKey.startswith('_ts_'):
+            try:
+                attrValue, first = tsparser.parse(attrValue,fuzzy=True)
+            except:
+                raise Exception("Unable to handle timestamp %s" %attrValue)
                 			
         matchKeys = filterByRelation(self.RI.get(attrKey,dict()).keys(),
 		                             attrValue,operator)
@@ -300,7 +307,9 @@ class Tree(dict):
             here['_children'].append(tree)
   
             for attr,valMap in attrsMap.iteritems():
-                for val, map in valMap.iteritems():			
+                for val, map in valMap.iteritems():	
+                    if attr.startswith('_ts_'):
+                        val = self._handleTS(attr,val)				
                     if self.RI.has_key(attr):
                         if self.RI[attr].has_key(val):
                             self.RI[attr][val].update(map)
@@ -318,12 +327,17 @@ class Tree(dict):
         try:		        
             for k,v in attrs.iteritems():
                 if oldAttrs.has_key(k):
-                    oldVal = oldAttrs[k]
+                    if k.startswith('_ts_'):
+                        oldVal = self._handleTS(k,oldAttrs[k])
+                    else:
+                        oldVal = oldAttrs[k]
                     if not isinstance(oldVal,dict) and not isinstance(oldVal,list):
                         self.RI[k][oldVal].remove(here['_id'])
                 here[k] = v
                 if k!='_id' and k!='_children' and not isinstance(v,dict)\
                     and not isinstance(v,list):
+                    if k.startswith('_ts_'):
+                        v = self._handleTS(k,v)
                     if self.RI.has_key(k):
                         if self.RI[k].has_key(v):
                             self.RI[k][v].add(here['_id'])
@@ -389,6 +403,46 @@ class Tree(dict):
                 id = generateID()
             node['_id'] = id
         return id
+
+    def _handleTS(self,k,v)	:	
+        if not self.tsAttrs.has_key(k):
+            self.tsAttrs[k] = 'month'
+        existing = self.tsAttrs[k]
+        try:
+            ts, first = tsparser.parse(v,dayfirst=existing=='day',
+			                            yearfirst=existing=='year',
+										fuzzy=True)
+            if first != existing:
+                if first == 'month':
+                    raise Exception
+                elif first == 'day':
+                    if existing == 'year':
+                        raise Exception
+                    else:
+                        self._resetTS(k,'day')
+                        self.tsAttrs[k] = 'day'
+                else:
+                    self._resetTS(k,'year')
+                    self.tsAttrs[k] = 'year'					
+        except:
+            traceback.print_exc()
+            raise Exception("Unable to guess/handle timestamp %s" %k)
+        return ts
+			
+    def _resetTS(self,k,first):
+        if not self.RI.has_key(k):
+            return
+        ids = set.union(*self.RI[k].values()) 	
+        self.RI[k] = {}		
+        for id in ids:      
+            ts, ret = tsparser.parse(self.PM[id][k],dayfirst=first=='day',
+			                           yearfirst=first=='year',fuzzy=True)
+            if ret != first:
+                raise Exception
+            if self.RI[k].has_key(ts):
+                self.RI[k][ts].add(id)
+            else:
+                self.RI[k][ts] = set([id])
 		
     def dump(self,out):
         breaker = treebreaker(self)
