@@ -126,11 +126,16 @@ class Selector(object):
                     				  " accepted" %(str(relational),str(path_logical)))
  
                 val = v.values()[0]
-                if v.keys()[0] == '_exists':
+                operator = v.keys()[0]
+                if operator == '_exists':
                     if not isinstance(val, bool):
-                        raise SyntaxError("_exists should be of boolean type")                      
-                if isinstance(val,dict) or isinstance(val,list):
-                    raise SyntaxError("Comparison of Array/Object type not accepted")				
+                        raise SyntaxError("_exists should be of boolean type") 
+                if operator == '_in' or operator == '_contains':
+                    if not isinstance(val,list):
+                        raise SyntaxError("%s operator should compare lists" %operator)
+                elif isinstance(val,(dict,list)):
+                    raise SyntaxError("Comparison of Array/Object type not accepted"
+					                   " for operator %s" %operator)				
 				
 		
  

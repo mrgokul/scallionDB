@@ -32,7 +32,25 @@ def evaluate(op1,op2,operator):
 
 def filterByRelation(keys,value,operator):
     if operator not in relational:
-        raise ValueError("Comparison should be made with one of %s" %str(relational))
+        raise ValueError("Comparison should be made with one of "
+		                 "%s" %str(relational))
+    if operator == '_in':
+        ret = set()
+        for key in keys:
+            if isinstance(key,tuple):
+                if any([v in key for v in value]):
+                    ret.add(key)
+            else:
+                if key in value:
+                    ret.add(key)
+        return ret
+    if operator == '_contains':
+        ret = set()
+        for key in keys:
+            if isinstance(key,tuple):
+                if all([v in key for v in value]):
+                    ret.add(key)
+        return ret
     if operator == '_eq':
         return set(filter((lambda x: x == value), keys))
     if operator == '_neq':
@@ -113,8 +131,6 @@ def treebreaker(tree):
                 childStack.append(0)
                 yield outNode
             else:
-                if not childStack:
-                    print outNode, node
                 if childStack[-1] != 0:
                     outNode = ", "+ outNode
                 yield outNode

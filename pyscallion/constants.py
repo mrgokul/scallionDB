@@ -12,9 +12,6 @@
   limitations under the License.
  '''
  
-logical = ['_and','_or']
-relational = ['_eq','_neq','_lte','_gte','_lt','_gt','_regex']
-id_type = '_eq'
 requests = ['GET','PUT','DELETE','LOAD','SHOW','DESCRIBE','SAVE']
 resources = ['TREE','ATTR']
 references = ['ANCESTORS','PARENT','SELF','CHILDREN','DESCENDANTS']

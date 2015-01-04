@@ -69,9 +69,6 @@ def validateAttrList(attribute_list):
     if isinstance(attribute_list,list):
         if "_children" in attribute_list:
             raise Exception("Error: - _children isn't a valid attribute")
-        #if not all([isinstance(each,basestring) for each in attribute_list]):
-         #   raise SyntaxError("Error: - Invalid list of attributes!"
-         #                         "Each attribute should be of string type")
         attribute_list = json.dumps(attribute_list)
     return attribute_list
 		
