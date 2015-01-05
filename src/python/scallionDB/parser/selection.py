@@ -96,12 +96,12 @@ class Selector(object):
     def _checkAttribute(self,k,v):
         if k == '_id':
             if isinstance(v, dict):
-                if(len(v) > 1) or v.keys()[0] != id_type:
+                if(len(v) > 1) or v.keys()[0] not in id_type:
                     raise SyntaxError("Only equality operator accepted for _id")
-                if not isinstance(v[id_type], basestring):
-                    raise SyntaxError("_id should be alphanumeric string")
-                if not v[id_type].isalnum():
-                    raise SyntaxError("_id should be alphanumeric")
+                #if not isinstance(v[v.keys()[0]], basestring):
+                 #   raise SyntaxError("_id should be alphanumeric string")
+                #if not v[v.keys()[0]].isalnum():
+                 #   raise SyntaxError("_id should be alphanumeric")
             elif isinstance(v,basestring):
                 if not v.isalnum():
                     raise SyntaxError("_id should be alphanumeric")

@@ -16,14 +16,15 @@ path_logical = ['$&','$|']
 path = ['$child','$desc']
 relational = ['_eq','_neq','_lte','_gte','_lt','_gt','_regex','_exists',
                '_in', '_contains']
-id_type = '_eq'
-requests = ['GET','PUT','DELETE','LOAD','SHOW','DESCRIBE','SAVE']
+id_type = ['_eq','_in']
+requests = ['GET','PUT','DELETE','LOAD','SHOW','DESCRIBE','SAVE','AGGREGATE']
 request_types = {'GETREQ':'GET',
                  'PUTREQ':'PUT',
 				 'DELREQ':'DELETE',
 				 'SHOWREQ':'SHOW',
 				 'LOADREQ':'LOAD',
-				 'SAVEREQ':'SAVE'}
+				 'SAVEREQ':'SAVE',
+				 'AGGREQ':'AGGREGATE'}
 tree_requests = ['GET','PUT','DELETE','LOAD','DESCRIBE','SAVE']
 nontree_requests = ['SHOW']
 read_request = ['GET','DESCRIBE']

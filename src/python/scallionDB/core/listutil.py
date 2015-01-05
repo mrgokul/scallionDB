@@ -33,7 +33,8 @@ def listFuncs(l,operator,value):
                 l.append(v)
         return l
     if operator == '$pop':
-        l.pop(value)
+        if value < len(l):
+            l.pop(value)
         return l
     if operator == '$chop':
         indexes = sorted(value,reverse=True)

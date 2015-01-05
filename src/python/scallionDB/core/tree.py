@@ -24,6 +24,7 @@ from treeutil import evaluate, flattenTree, traverse, generateID
 from treeutil import  filterByRelation, treebreaker
 from listutil import listFuncs
 from dateutil import parser as tsparser
+from aggregation import pipeline
 
 class Tree(dict):
 
@@ -140,6 +141,10 @@ class Tree(dict):
                 treeIDs.append(node['_id'])	
         gc.collect()		
         return treeIDs          
+		
+    def AGGREGATE(self,expr,ref,agg):
+        result = self.GET(expr,ref,'*')
+        return pipeline(agg,result)
 			
     def _getNodes(self,id,refs):
         ret = []
@@ -195,6 +200,12 @@ class Tree(dict):
         attrValue = expr[1]
         operator = '_eq'
         if attrKey == '_id':
+            if isinstance(attrValue,dict):
+                if attrValue.keys()[0] == '_eq':
+                    return set(attrValue.values())
+                else:
+                    return set(attrValue.values()[0])  
+                
             return set([attrValue])
 
         if attrKey == '$child':      
@@ -288,9 +299,11 @@ class Tree(dict):
                 parentID = self._setID(node)
                 self.PM[parentID] = node			
                 for k,v in node.iteritems():
-                    if isinstance(k,basestring) and k.startswith('$'):
+                    if not isinstance(k, basestring):
+                        raise KeyError("All attribute keys should be string")
+                    if k.startswith('$'):
                         raise KeyError("attribute cannot start with '$'")
-                    if isinstance(k,basestring) and '.' in k:
+                    if '.' in k:
                         raise KeyError("attribute cannot contain '.'")
                     if k!='_id' and k!='_children' and not isinstance(v,dict):
                         if isinstance(v,list):
@@ -308,7 +321,7 @@ class Tree(dict):
   
             for attr,valMap in attrsMap.iteritems():
                 for val, map in valMap.iteritems():	
-                    if isinstance(attr,basestring) and attr.startswith('_ts_'):
+                    if attr.startswith('_ts_'):
                         val = self._handleTS(attr,val)					
                     self.RI[attr][val].update(map)		
             return tree['_id']
@@ -320,9 +333,11 @@ class Tree(dict):
         oldAttrs = {k:here[k] for k in attrs.keys() if here.has_key(k)}
         try:		        
             for k,v in attrs.iteritems():
-                if isinstance(k,basestring) and k.startswith('$'):
+                if not isinstance(k, basestring):
+                    raise KeyError("All attribute keys should be string")
+                if  k.startswith('$'):
                     raise KeyError("attribute cannot start with '$'")
-                if isinstance(k,basestring) and '.' in k:
+                if'.' in k:
                     raise KeyError("attribute cannot contain '.'")
                 if k == '_id' or k == '_children':
                     raise KeyError("attribute cannot be %s " %k)               
@@ -332,7 +347,7 @@ class Tree(dict):
                     if isinstance(oldVal,list) and isinstance(v,dict):
                         self._handleListAttrs(here,k,v)
                         continue
-                    elif isinstance(k,basestring) and  k.startswith('_ts_'):
+                    elif k.startswith('_ts_'):
                         oldVal = self._handleTS(k,oldVal)
                     elif isinstance(v,list):
                         oldVal = self._handleList(v)
@@ -400,7 +415,7 @@ class Tree(dict):
 						
             if replace.has_key(k):
                 oldVal = replace[k]
-                if isinstance(k,basestring) and k.startswith('_ts_'):
+                if k.startswith('_ts_'):
                     oldVal = self._handleTS(k,oldVal)                
                 here[k] = oldVal
                 if isinstance(oldVal,list):

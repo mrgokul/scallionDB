@@ -58,6 +58,8 @@ def evaluate(trees,parsed,folder):
             return tree.GET(selector,reference,attrs)
         else:
             return tree.GET(selector,reference)
+    elif req == 'AGGREGATE':
+        return tree.AGGREGATE(selector,reference,attrs)
     elif req == 'DELETE':
         if attrs: 
             return tree.DELETE(selector,reference,attrs)

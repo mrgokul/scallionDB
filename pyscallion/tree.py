@@ -72,7 +72,17 @@ class Tree(object):
         statement = ' '.join(["DELETE","ATTR",self.name,reference.upper(),
                               selector,attribute_list])
                             
-        return send_request(self.request, statement)    
+        return send_request(self.request, statement)   
+
+    def aggregate(self,selector,reference,operations):
+        operations = validateAttrList(operations)
+        selector = validateSelector(selector)
+        reference = validateAttrReferences(reference)
+
+        statement = ' '.join(["AGGREGATE","ATTR",self.name,reference.upper(),
+                              selector,operations])
+                            
+        return send_request(self.request, statement)		
         
     def loadTree(self,path):
         statement = ' '.join(["LOAD",self.name,path])                        
