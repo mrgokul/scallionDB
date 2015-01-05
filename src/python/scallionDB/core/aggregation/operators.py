@@ -55,6 +55,8 @@ def reduce_result(request,result):
                 raise SyntaxError("Variable %s should be prefixed with '$'"
 			                   %operand)     
             operand = operand[1:]
+        if isinstance(operand,dict):
+            pass
         elif operator == '$sum' and operand == 1:
                 operator = '$sum1'
         else:
@@ -142,19 +144,29 @@ def limit(request,result):
 		
 def sort(request,result):
     if result and isinstance(result[0],list):
-        return [sort(request,res) for res in result]
-    for k in request.keys():
-        if k.startswith('$'):
-            raise SyntaxError("Sort keys should start with $")	    
-    for v in request.values():
+        return [sort(request,res) for res in result] 
+    if not isinstance(request,list):
+        raise SyntaxError("Sort request should be a list of sorting key/value pairs")
+    if not all([isinstance(d,dict) for d in request]):
+        raise SyntaxError("Sort request should be a list of sorting key/value pairs")
+    if any([len(d)>1 for d in request]):
+        raise SyntaxError("Each sort key should be of length 1")
+		
+    sortKeys = [d.keys()[0] for d in request]		
+    sortOrder = [d.values()[0] for d in request]
+		
+    if any([d.keys()[0].startswith('$') for d in request]):
+        raise SyntaxError("Sort keys should not start with $")
+	    
+    for v in sortOrder:
         if v != 1 and v != -1:
             raise SyntaxError("Sort values should be 1 or -1 ")	 			
     for res in result:
-        for k in request.keys():
+        for k in sortKeys:
             if not res.has_key(k):
                 res[k] = None
 	
-    comparers = [(itemgetter(k),v) for k,v in request.items()]
+    comparers = [(itemgetter(k),v) for k,v in zip(sortKeys,sortOrder)]
     def comparer(left,right):
         for fn, mult in comparers:
             result = cmp(fn(left),fn(right))
