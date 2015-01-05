@@ -26,6 +26,8 @@ from listutil import listFuncs
 from dateutil import parser as tsparser
 from aggregation import pipeline
 
+REFERENCES = ['ANCESTORS','PARENT','SELF','CHILDREN','DESCENDANTS']
+
 class Tree(dict):
 
     def __init__(self, name):
@@ -148,7 +150,8 @@ class Tree(dict):
 			
     def _getNodes(self,id,refs):
         ret = []
-        for ref in refs.split(','):
+        ordRefs = [r for r in REFERENCES if r in refs.split(',')]
+        for ref in ordRefs:
             if id == '_ROOT':
                 ret.append(self)
             if not self.PM.has_key(id):
@@ -171,6 +174,7 @@ class Tree(dict):
                     if id == '_ROOT':
                         break
                     ret.append(self.PM[id])
+                ret.reverse()
         return ret
            
     def _getAllID(self,expr,ids):
@@ -198,10 +202,10 @@ class Tree(dict):
     def _getIDset(self, expr,caps):
         attrKey = expr[0]
         attrValue = expr[1]
-        operator = '_eq'
+        operator = '$eq'
         if attrKey == '_id':
             if isinstance(attrValue,dict):
-                if attrValue.keys()[0] == '_eq':
+                if attrValue.keys()[0] == '$eq':
                     return set(attrValue.values())
                 else:
                     return set(attrValue.values()[0])  
@@ -259,7 +263,7 @@ class Tree(dict):
         if isinstance(attrValue,dict):
             operator, attrValue = attrValue.items()[0] 
 			
-        if operator == '_exists':
+        if operator == '$exists':
             if attrValue:
                 return set.union(*self.RI[attrKey].values())
             else:

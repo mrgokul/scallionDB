@@ -29,7 +29,7 @@ class TreeTest(unittest.TestCase):
     #PUT tests GET as well
 	
     def test_put(self):
-        t.PUT('{"_or":[{"a":{"_gt":10}},{"a":{"_lt":-45}}]}','PARENT',{"_id":"xxxx"})
+        t.PUT('{"$or":[{"a":{"$gt":10}},{"a":{"$lt":-45}}]}','PARENT',{"_id":"xxxx"})
         j['_children'][0]['_children'].append({"_id":"xxxx","_children":[]})
         self.assertEqual(j,t['_children'][0])	
 

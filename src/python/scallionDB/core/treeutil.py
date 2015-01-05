@@ -17,8 +17,8 @@ from scallionDB.parser.selection import Operator
 from random import randint
 import json, re
 
-_and = Operator('_and')
-_or = Operator('_or')
+_and = Operator('$and')
+_or = Operator('$or')
 
 def generateID():
     return "%09x" % randint(0,10**11)
@@ -34,7 +34,7 @@ def filterByRelation(keys,value,operator):
     if operator not in relational:
         raise ValueError("Comparison should be made with one of "
 		                 "%s" %str(relational))
-    if operator == '_in':
+    if operator == '$in':
         ret = set()
         for key in keys:
             if isinstance(key,tuple):
@@ -44,26 +44,26 @@ def filterByRelation(keys,value,operator):
                 if key in value:
                     ret.add(key)
         return ret
-    if operator == '_contains':
+    if operator == '$contains':
         ret = set()
         for key in keys:
             if isinstance(key,tuple):
                 if all([v in key for v in value]):
                     ret.add(key)
         return ret
-    if operator == '_eq':
+    if operator == '$eq':
         return set(filter((lambda x: x == value), keys))
-    if operator == '_neq':
+    if operator == '$neq':
         return set(filter((lambda x: x != value), keys))
-    if operator == '_lt':
+    if operator == '$lt':
         return set(filter((lambda x: x < value), keys))
-    if operator == '_gt':
+    if operator == '$gt':
         return set(filter((lambda x: x > value), keys))
-    if operator == '_lte':
+    if operator == '$lte':
         return set(filter((lambda x: x <= value), keys))
-    if operator == '_gte':
+    if operator == '$gte':
         return set(filter((lambda x: x >= value), keys))	
-    if operator == '_regex':
+    if operator == '$regex':
         str_keys = [a for a in keys if isinstance(a,basestring)]
         return set(filter((lambda x: re.search(value,x)), str_keys))	
 		

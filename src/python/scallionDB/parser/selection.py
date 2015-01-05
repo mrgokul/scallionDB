@@ -53,8 +53,8 @@ class Selector(object):
                 self.operatorStack = []
                 self.prefix = []        
         else:
-            self.operatorStack = [OperatorTimesReference('_and',0)]
-            self.prefix = [Operator('_and')]		
+            self.operatorStack = [OperatorTimesReference('$and',0)]
+            self.prefix = [Operator('$and')]		
         for k,v in self.expr.iteritems():
             if k in logical:
                 self._evalOperator(k,v)
@@ -99,12 +99,12 @@ class Selector(object):
                 op, vals = v.items()[0]
                 if(len(v) > 1) or op not in id_type:
                     raise SyntaxError("Only equality operator accepted for _id")
-                if op == '_eq':
+                if op == '$eq':
                     if not isinstance(vals, basestring):
                         raise SyntaxError("_id should be alphanumeric string")
                     if not vals.isalnum():
                         raise SyntaxError("_id should be alphanumeric")
-                if op == '_in':
+                if op == '$in':
                     if not all([isinstance(e, basestring) for e in vals]):
                         raise SyntaxError("_id should be alphanumeric string")
                     if not all([e.isalnum() for e in vals]):
@@ -134,10 +134,10 @@ class Selector(object):
  
                 val = v.values()[0]
                 operator = v.keys()[0]
-                if operator == '_exists':
+                if operator == '$exists':
                     if not isinstance(val, bool):
-                        raise SyntaxError("_exists should be of boolean type") 
-                if operator == '_in' or operator == '_contains':
+                        raise SyntaxError("$exists should be of boolean type") 
+                if operator == '$in' or operator == '$contains':
                     if not isinstance(val,list):
                         raise SyntaxError("%s operator should compare lists" %operator)
                 elif isinstance(val,(dict,list)):

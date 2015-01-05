@@ -55,8 +55,6 @@ def reduce_result(request,result):
                 raise SyntaxError("Variable %s should be prefixed with '$'"
 			                   %operand)     
             operand = operand[1:]
-        if isinstance(operand,dict):
-            pass
         elif operator == '$sum' and operand == 1:
                 operator = '$sum1'
         else:

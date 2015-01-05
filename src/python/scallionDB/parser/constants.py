@@ -11,12 +11,12 @@
   See the License for the specific language governing permissions and
   limitations under the License.
  '''
-logical = ['_and','_or']
+logical = ['$and','$or']
 path_logical = ['$&','$|']
 path = ['$child','$desc']
-relational = ['_eq','_neq','_lte','_gte','_lt','_gt','_regex','_exists',
-               '_in', '_contains']
-id_type = ['_eq','_in']
+relational = ['$eq','$neq','$lte','$gte','$lt','$gt','$regex','$exists',
+               '$in', '$contains']
+id_type = ['$eq','$in']
 requests = ['GET','PUT','DELETE','LOAD','SHOW','DESCRIBE','SAVE','AGGREGATE']
 request_types = {'GETREQ':'GET',
                  'PUTREQ':'PUT',
