@@ -15,10 +15,8 @@
 import operators
 import types
  
-aggFunc = {'$'+fn:operators.__dict__.get(fn) for fn in dir(operators) 
+aggFunc = {'$'+fn[1:]:operators.__dict__.get(fn) for fn in dir(operators) 
                if isinstance(operators.__dict__.get(fn),types.FunctionType)}
-
-aggFunc['$reduce'] = aggFunc.pop('$reduce_result')
 
 
 def pipeline(request,result):
@@ -27,9 +25,10 @@ def pipeline(request,result):
             raise SyntaxError("Invalid aggregation request")
         if len(req) > 1:
             raise SyntaxError("Only one operation allowed per iteration")
-        if req.keys()[0] not in aggFunc:
+        k,v = req.items()[0]
+        if k not in aggFunc:
             raise SyntaxError("Only %s aggregation functions accepted" 
 			                 %str(aggFunc.keys()))
-        result = aggFunc[req.keys()[0]](req.values()[0],result)						 
+        result = aggFunc[k](v,result)						 
     return result
 	

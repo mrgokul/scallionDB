@@ -98,7 +98,7 @@ class Selector(object):
             if isinstance(v, dict):
                 op, vals = v.items()[0]
                 if(len(v) > 1) or op not in id_type:
-                    raise SyntaxError("Only equality operator accepted for _id")
+                    raise SyntaxError("Only $eq or $in operator accepted for _id")
                 if op == '$eq':
                     if not isinstance(vals, basestring):
                         raise SyntaxError("_id should be alphanumeric string")
@@ -131,9 +131,8 @@ class Selector(object):
                 if(len(v) > 1) or v.keys()[0] not in relational:
                     raise SyntaxError("Only one of %s operators or %s logical_paths"
                     				  " accepted" %(str(relational),str(path_logical)))
- 
-                val = v.values()[0]
-                operator = v.keys()[0]
+
+                operator, val = v.items()[0]
                 if operator == '$exists':
                     if not isinstance(val, bool):
                         raise SyntaxError("$exists should be of boolean type") 

@@ -18,15 +18,13 @@ import itertools
 from collections import defaultdict
 from operator import itemgetter
 
-import apply
+from apply import reduce_, map_, filter_
  
-applyFunc = {'$'+fn:apply.__dict__.get(fn) for fn in dir(apply) 
-               if isinstance(apply.__dict__.get(fn),types.FunctionType)}
+reduceFuncs = {'$'+fn[1:]:reduce_.__dict__.get(fn) for fn in dir(reduce_) 
+               if isinstance(reduce_.__dict__.get(fn),types.FunctionType)}
+			   
 
-applyFunc['$sum'] = applyFunc.pop('$add')
-
-
-def flatten(request,result):
+def _flatten(request,result):
     if not request:
         raise SyntaxError ("Always be truthful to flatten")
     if isinstance(result[0],list):
@@ -34,11 +32,11 @@ def flatten(request,result):
     else:
         return result
 
-def reduce_result(request,result):
+def _reduce(request,result):
     """
     {"foo":{"$sum":"$foo"}}	
 	"""
-    result = flatten(True,result)
+    result = _flatten(True,result)
     red = defaultdict(lambda: defaultdict(list))
     output = {}
     for okey, req in request.items():
@@ -47,9 +45,9 @@ def reduce_result(request,result):
         if len(req) > 1:
             raise SyntaxError("apply length > 1. Got %s" %str(req))
         operator, operand = req.items()[0]      
-        if operator not in applyFunc.keys():
+        if operator not in reduceFuncs.keys():
             raise SyntaxError("apply function should be one of %s"
-			                   %str(applyFunc.keys()))  
+			                   %str(reduceFuncs.keys()))  
         if isinstance(operand, basestring):
             if not operand.startswith('$'):
                 raise SyntaxError("Variable %s should be prefixed with '$'"
@@ -65,17 +63,17 @@ def reduce_result(request,result):
 			
     for operator, groups in red.iteritems():
         for okey, l in groups.iteritems():
-            output[okey] = applyFunc[operator](l)	
+            output[okey] = reduceFuncs[operator](l)	
     return output
    
 
-def refreduce(request,result):
+def _refreduce(request,result):
     if not isinstance(result[0],list):
         raise ValueError("Cannot reference reduce on a flat tree")
-    return [reduce_result(request, res) for res in result]
+    return [_reduce(request, res) for res in result]
 
 
-def unwind(request,result):
+def _unwind(request,result):
     if result and isinstance(result[0],list):
         return [unwind(request,res) for res in result]
     unwinded = []
@@ -98,7 +96,7 @@ def unwind(request,result):
             unwinded.append(unwMap)         
     return unwinded
  
-def group(request,result):
+def _group(request,result):
     """
 	{"_id":{"":""},"a":{"$sum":"$a"}}
 	"""
@@ -128,19 +126,19 @@ def group(request,result):
         ret = {}
         for gk, gv in zip(grouping.values(),k):
             ret[gk] = gv
-        red = reduce_result(request,v)
+        red = _reduce(request,v)
         ret.update(red)
         output.append(ret)
     return output
 
-def limit(request,result):
+def _limit(request,result):
     if not isinstance(request,int):
         raise SyntaxError("Limit number should be integer")
     if result and isinstance(result[0],list):
         return [limit(request,res) for res in result]
     return result[:request]
 		
-def sort(request,result):
+def _sort(request,result):
     if result and isinstance(result[0],list):
         return [sort(request,res) for res in result] 
     if not isinstance(request,list):
@@ -150,10 +148,9 @@ def sort(request,result):
     if any([len(d)>1 for d in request]):
         raise SyntaxError("Each sort key should be of length 1")
 		
-    sortKeys = [d.keys()[0] for d in request]		
-    sortOrder = [d.values()[0] for d in request]
+    sortKeys, sortOrder = zip(*[d.items()[0] for d in request])		
 		
-    if any([d.keys()[0].startswith('$') for d in request]):
+    if any([k.startswith('$') for k in sortKeys]):
         raise SyntaxError("Sort keys should not start with $")
 	    
     for v in sortOrder:

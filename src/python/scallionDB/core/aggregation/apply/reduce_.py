@@ -13,73 +13,79 @@
  '''
  
  
-def add(iplist):
+def _sum(iplist):
     if isinstance(iplist,list):
         return sum([i for i in iplist if i is not None])
     else:
         return 0
 		
-def sum1(iplist):
+def _sum1(iplist):
     if isinstance(iplist,list):
         return len(iplist)
     else:
         return 0 
 		
-def count(iplist):
+def _count(iplist):
     if isinstance(iplist,list):
         return len([i for i in iplist if i is not None])
     else:
         return 0
 
-def unique(iplist):
+def _unique(iplist):
     if isinstance(iplist,list):
         return list(set([i for i in iplist if i is not None]))
     else:
         return None
+		
+def _all(iplist):
+    if isinstance(iplist,list):
+        return [i for i in iplist if i is not None]
+    else:
+        return None
 
-def append(iplist):
+def _append(iplist):
     if all([isinstance(e,list) for e in iplist]):
         return reduce(lambda x,y: x+y,iplist)
     else:
         return None
 
-def union(iplist):
+def _union(iplist):
     if all([isinstance(e,list) for e in iplist]):
         return list(reduce(lambda x,y: set.union(set(x),set(y)),iplist))
     else:
         return None
 
-def intersection(iplist):
+def _intersection(iplist):
     if all([isinstance(e,list) for e in iplist]):
         return list(reduce(lambda x,y: set.intersection(set(x),set(y)),iplist))
     else:
         return None
 
-def lenunique(iplist):
+def _lenunique(iplist):
     if isinstance(iplist,list):
         return count(unique(iplist))
     else:
         return 0
 
-def avg(iplist):
+def _avg(iplist):
     if iplist and isinstance(iplist,list):
         return add(iplist)/(1.0*len(iplist))
     else:
         return 0
 
-def avg1(iplist):
+def _avg1(iplist):
     if  isinstance(iplist,list) and count(iplist):
         return add(iplist)/(1.0*count(iplist))
     else:
         return 0
 		
-def minimum(iplist):
+def _min(iplist):
     if  iplist and isinstance(iplist,list):
         return min(iplist)
     else:
         return None
 		
-def maximum(iplist):
+def _max(iplist):
     if  iplist and isinstance(iplist,list):
         return max(iplist)
     else:
