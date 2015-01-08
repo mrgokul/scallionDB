@@ -14,31 +14,31 @@
  
  
 def _sumlist(maplist):
-    if isinstance(iplist,list):
-        return sum([i for i in iplist if i is not None])
+    if isinstance(maplist,list):
+        return sum([i for i in maplist if i is not None])
     else:
         return None
 		
 def _first(maplist):   
-    if isinstance(iplist,list):
+    if isinstance(maplist,list) and maplist:
         return maplist[0]
     else:
         return None
 		
 def _last(maplist):   
-    if isinstance(iplist,list):
+    if isinstance(maplist,list) and maplist:
         return maplist[-1]
     else:
         return None
 		
 def _reverse(maplist):   
-    if isinstance(iplist,list):
+    if isinstance(maplist,list):
         return maplist[::-1]
     else:
         return None
 		
 def _len(maplist):
-    if isinstance(iplist,list):
+    if isinstance(maplist,list):
         return len(maplist)
     else:
         return None    

@@ -169,12 +169,14 @@ class Tree(dict):
                 if parent != '_ROOT':
                     ret.append(self.PM[parent])
             elif ref == 'ANCESTORS':
+                aid = id
                 while True:
                     id = self.parentChildMap[self.PM[id]['_id']]
                     if id == '_ROOT':
                         break
                     ret.append(self.PM[id])
                 ret.reverse()
+                id = aid
         return ret
            
     def _getAllID(self,expr,ids):

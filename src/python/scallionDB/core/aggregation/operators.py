@@ -22,9 +22,15 @@ from apply import reduce_, map_, filter_
  
 reduceFuncs = {'$'+fn[1:]:reduce_.__dict__.get(fn) for fn in dir(reduce_) 
                if isinstance(reduce_.__dict__.get(fn),types.FunctionType)}
+mapFuncs = {'$'+fn[1:]:map_.__dict__.get(fn) for fn in dir(map_) 
+               if isinstance(map_.__dict__.get(fn),types.FunctionType)}
+filterFuncs = {'$'+fn[1:]:filter_.__dict__.get(fn) for fn in dir(filter_) 
+               if isinstance(filter_.__dict__.get(fn),types.FunctionType)}
 			   
 
 def _flatten(request,result):
+    if not result: 
+        return []
     if not request:
         raise SyntaxError ("Always be truthful to flatten")
     if isinstance(result[0],list):
@@ -36,6 +42,8 @@ def _reduce(request,result):
     """
     {"foo":{"$sum":"$foo"}}	
 	"""
+    if not result: 
+        return []
     result = _flatten(True,result)
     red = defaultdict(lambda: defaultdict(list))
     output = {}
@@ -68,14 +76,18 @@ def _reduce(request,result):
    
 
 def _refreduce(request,result):
+    if not result: 
+        return []
     if not isinstance(result[0],list):
         raise ValueError("Cannot reference reduce on a flat tree")
     return [_reduce(request, res) for res in result]
 
 
 def _unwind(request,result):
+    if not result: 
+        return []
     if result and isinstance(result[0],list):
-        return [unwind(request,res) for res in result]
+        return [_unwind(request,res) for res in result]
     unwinded = []
     for res in result:
         unwMap = {}
@@ -100,8 +112,10 @@ def _group(request,result):
     """
 	{"_id":{"":""},"a":{"$sum":"$a"}}
 	"""
+    if not result: 
+        return []
     if result and isinstance(result[0],list):
-        return [group(request,res) for res in result]
+        return [_group(request,res) for res in result]
 
     aggregate = defaultdict(list)
     if not request.has_key('_id'):
@@ -130,17 +144,46 @@ def _group(request,result):
         ret.update(red)
         output.append(ret)
     return output
-
+	
+def _map(request,result):
+    if not result: 
+        return []
+    if result and isinstance(result[0],list):
+        return [_map(request,res) for res in result]    
+    for okey, req in request.items():
+        if okey.startswith('$'):
+            raise SyntaxError("Aliases cannot start with $")	
+        if len(req) > 1:
+            raise SyntaxError("apply length > 1. Got %s" %str(req))
+        operator, operand = req.items()[0]      
+        if operator not in mapFuncs.keys():
+            raise SyntaxError("apply function should be one of %s"
+			                   %str(mapFuncs.keys()))  
+        if isinstance(operand, basestring):
+            if not operand.startswith('$'):
+                raise SyntaxError("Variable %s should be prefixed with '$'"
+			                   %operand)     
+            operand = operand[1:]
+        for res in result:
+            if res.has_key(operand):
+                res[operand] = mapFuncs[operator](res[operand])
+    return result
+    
+			
 def _limit(request,result):
+    if not result: 
+        return []
     if not isinstance(request,int):
         raise SyntaxError("Limit number should be integer")
     if result and isinstance(result[0],list):
-        return [limit(request,res) for res in result]
+        return [_limit(request,res) for res in result]
     return result[:request]
 		
 def _sort(request,result):
+    if not result: 
+        return []
     if result and isinstance(result[0],list):
-        return [sort(request,res) for res in result] 
+        return [_sort(request,res) for res in result] 
     if not isinstance(request,list):
         raise SyntaxError("Sort request should be a list of sorting key/value pairs")
     if not all([isinstance(d,dict) for d in request]):
