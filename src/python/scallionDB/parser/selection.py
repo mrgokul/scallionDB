@@ -119,7 +119,10 @@ class Selector(object):
                 raise SyntaxError("$child or $desc should be of dict type")
             keys = set(v.keys())
             if not keys.issubset(set(path_logical)):
-                 raise SyntaxError("$child or $desc keys can only be of %s"
+                raise SyntaxError("$child or $desc keys can only be one of %s"
+				                    %(str(path_logical),)) 
+            if len(keys) > 1:
+                raise SyntaxError("Only one %s operator allowed"
 				                    %(str(path_logical),)) 
             values = v.values()
             if not all([isinstance(l,list) for l in values]):   

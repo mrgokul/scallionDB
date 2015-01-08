@@ -218,16 +218,16 @@ class Tree(dict):
             for _and in attrValue.get('$&',[]):
                 childIDs = self._getAllID(_and,['_ROOT'])
                 if i:
-                    childset.intersection_update(set([self.parentChildMap[id] 
-				                                 for id in childIDs]))
+                    childset.intersection_update(set([self.parentChildMap[id]
+				             for id in childIDs if self.parentChildMap.has_key(id)]))
                 else:
-                    childset.update(set([self.parentChildMap[id] 
-				                                 for id in childIDs]))        
+                    childset.update(set([self.parentChildMap[id] for id in childIDs
+				                     if self.parentChildMap.has_key(id)]))        
                 i += 1												 
             for _or in attrValue.get('$|',[]):
                 childIDs = self._getAllID(_or,['_ROOT'])
-                childset.update(set([self.parentChildMap[id] 
-				                for id in childIDs]))
+                childset.update(set([self.parentChildMap[id] for id in childIDs
+				                if self.parentChildMap.has_key(id)]))
             return childset - set(['_ROOT'])
         if attrKey == '$desc':
             descset = set()   
@@ -236,6 +236,8 @@ class Tree(dict):
                 ids = set()
                 descIDs = self._getAllID(_and,['_ROOT'])
                 for id in descIDs:
+                    if not self.parentChildMap.has_key(id):
+                        continue
                     fid = self.parentChildMap[id]
                     while True:
                         if fid == '_ROOT':
@@ -251,6 +253,8 @@ class Tree(dict):
                 ids = set()
                 descIDs = self._getAllID(_or,['_ROOT'])
                 for id in descIDs:
+                    if not self.parentChildMap.has_key(id):
+                        continue
                     fid = self.parentChildMap[id]
                     while True:
                         if fid == '_ROOT':
