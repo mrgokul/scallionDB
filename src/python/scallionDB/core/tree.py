@@ -20,11 +20,10 @@ from copy import deepcopy
 from collections import defaultdict
 
 from scallionDB.parser.selection import Selector, Operator
-from treeutil import evaluate, flattenTree, traverse, generateID
-from treeutil import  filterByRelation, treebreaker
+from treeutil import flattenTree, traverse, generateID, treebreaker
 from listutil import listFuncs
 from dateutil import parser as tsparser
-from aggregation import pipeline
+from aggregation import pipeline, evaluate, filterByRelation
 
 REFERENCES = ['ANCESTORS','PARENT','SELF','CHILDREN','DESCENDANTS']
 
@@ -67,7 +66,6 @@ class Tree(dict):
                         all = True
                     if all:
                         attr = [a for a in node.keys() if a != '_children']
-                        attr.append('$children')
                     else:
                         attr = attrs
                     select = {k:node.get(k) for k in attr if k in node}
@@ -145,7 +143,22 @@ class Tree(dict):
         return treeIDs          
 		
     def AGGREGATE(self,expr,ref,agg):
-        result = self.GET(expr,ref,'*')
+        if not isinstance(agg,list):
+            raise SyntaxError("Invalid aggregation request")
+        req = agg[0]			
+        if not isinstance(req,dict):
+            raise SyntaxError("Invalid aggregation request")
+        if len(req) > 1:
+            raise SyntaxError("Only one operation allowed per iteration")
+        k,v = req.items()[0]
+        if k == '$project':
+            agg.pop(0)
+            project = v
+            if not isinstance(v, list):
+                raise SyntaxError("Projection items should be an array")
+        else:
+            project = '*'
+        result = self.GET(expr,ref,project)
         return pipeline(agg,result)
 			
     def _getNodes(self,id,refs):
@@ -153,30 +166,30 @@ class Tree(dict):
         ordRefs = [r for r in REFERENCES if r in refs.split(',')]
         for ref in ordRefs:
             if id == '_ROOT':
-                ret.append(self)
-            if not self.PM.has_key(id):
+                node = self
+            elif not self.PM.has_key(id):
                 continue
-            if ref == 'SELF':
-                ret.append(self.PM[id])
-            elif ref == 'CHILDREN':
-                ret.append(self.PM[id]['_children'])
-            elif ref == 'DESCENDANTS':
-                for node in self.PM[id]['_children']:
-                    ret.extend(flattenTree(node))
-            elif ref == 'PARENT':
+            else:
                 node = self.PM[id]
+            if ref == 'SELF':
+                ret.append(node)
+            elif ref == 'CHILDREN':
+                ret.extend(node['_children'])
+            elif ref == 'DESCENDANTS':
+                for node_ in node['_children']:
+                    ret.extend(flattenTree(node_))
+            elif ref == 'PARENT':
                 parent = self.parentChildMap[node['_id']]
                 if parent != '_ROOT':
-                    ret.append(self.PM[parent])
+                    ret.append(node[parent])
             elif ref == 'ANCESTORS':
                 aid = id
                 while True:
-                    id = self.parentChildMap[self.PM[id]['_id']]
-                    if id == '_ROOT':
+                    aid = self.parentChildMap[self.PM[aid]['_id']]
+                    if aid == '_ROOT':
                         break
-                    ret.append(self.PM[id])
+                    ret.append(self.PM[aid])
                 ret.reverse()
-                id = aid
         return ret
            
     def _getAllID(self,expr,ids):

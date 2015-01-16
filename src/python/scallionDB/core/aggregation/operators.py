@@ -23,10 +23,7 @@ from apply import reduce_, map_, filter_
 reduceFuncs = {'$'+fn[1:]:reduce_.__dict__.get(fn) for fn in dir(reduce_) 
                if isinstance(reduce_.__dict__.get(fn),types.FunctionType)}
 mapFuncs = {'$'+fn[1:]:map_.__dict__.get(fn) for fn in dir(map_) 
-               if isinstance(map_.__dict__.get(fn),types.FunctionType)}
-filterFuncs = {'$'+fn[1:]:filter_.__dict__.get(fn) for fn in dir(filter_) 
-               if isinstance(filter_.__dict__.get(fn),types.FunctionType)}
-			   
+               if isinstance(map_.__dict__.get(fn),types.FunctionType)}			   
 
 def _flatten(request,result):
     if not result: 
@@ -86,7 +83,7 @@ def _refreduce(request,result):
 def _unwind(request,result):
     if not result: 
         return []
-    if result and isinstance(result[0],list):
+    if isinstance(result[0],list):
         return [_unwind(request,res) for res in result]
     unwinded = []
     for res in result:
@@ -148,7 +145,7 @@ def _group(request,result):
 def _map(request,result):
     if not result: 
         return []
-    if result and isinstance(result[0],list):
+    if  isinstance(result[0],list):
         return [_map(request,res) for res in result]    
     for okey, req in request.items():
         if okey.startswith('$'):
@@ -166,10 +163,29 @@ def _map(request,result):
             operand = operand[1:]
         for res in result:
             if res.has_key(operand):
-                res[operand] = mapFuncs[operator](res[operand])
+                res[okey] = mapFuncs[operator](res[operand])
     return result
-    
-			
+	
+def _filter(request,result):
+    if not result: 
+        return []
+    if isinstance(result[0],list):
+        return [_filter(request,res) for res in result]   
+    return filter_._filter(request,result)
+	
+def _project(request,result):
+    if not result: 
+        return []
+    if result and isinstance(result[0],list):
+        return [_project(request,res) for res in result]  
+    if not isinstance(request,list):
+        raise SyntaxError("projection request should be of array type")	
+    for res in result:
+        for k in res.keys():
+            if k not in request:
+                res.pop(k)
+    return result
+    		
 def _limit(request,result):
     if not result: 
         return []

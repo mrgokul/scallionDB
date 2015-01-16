@@ -12,60 +12,12 @@
   limitations under the License.
  '''
 
-from scallionDB.parser.constants import *
-from scallionDB.parser.selection import Operator
+
 from random import randint
 import json, re
 
-_and = Operator('$and')
-_or = Operator('$or')
-
 def generateID():
     return "%09x" % randint(0,10**11)
-
-def evaluate(op1,op2,operator):
-    if operator == _and:
-        return op1 & op2
-    if operator == _or:
-        return op1 | op2
-				
-
-def filterByRelation(keys,value,operator):
-    if operator not in relational:
-        raise ValueError("Comparison should be made with one of "
-		                 "%s" %str(relational))
-    if operator == '$in':
-        ret = set()
-        for key in keys:
-            if isinstance(key,tuple):
-                if any([v in key for v in value]):
-                    ret.add(key)
-            else:
-                if key in value:
-                    ret.add(key)
-        return ret
-    if operator == '$contains':
-        ret = set()
-        for key in keys:
-            if isinstance(key,tuple):
-                if all([v in key for v in value]):
-                    ret.add(key)
-        return ret
-    if operator == '$eq':
-        return set(filter((lambda x: x == value), keys))
-    if operator == '$neq':
-        return set(filter((lambda x: x != value), keys))
-    if operator == '$lt':
-        return set(filter((lambda x: x < value), keys))
-    if operator == '$gt':
-        return set(filter((lambda x: x > value), keys))
-    if operator == '$lte':
-        return set(filter((lambda x: x <= value), keys))
-    if operator == '$gte':
-        return set(filter((lambda x: x >= value), keys))	
-    if operator == '$regex':
-        str_keys = [a for a in keys if isinstance(a,basestring)]
-        return set(filter((lambda x: re.search(value,x)), str_keys))	
 		
 def flattenTree(tree):
     nodes = []

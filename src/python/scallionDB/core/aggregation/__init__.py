@@ -13,3 +13,4 @@
  '''
  
 from aggregate import pipeline
+from apply.filter_ import evaluate, filterByRelation
